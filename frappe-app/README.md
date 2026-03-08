@@ -1,32 +1,51 @@
-# CareVibes POS - Frappe App
+# CareVibes POS - ERPNext Token Exchange
 
-Minimal Frappe app that provides a token exchange endpoint for the CareVibes POS UI.
+## Quick Setup: Server Script (Recommended)
 
-## What it does
+Create a Server Script in ERPNext admin. No app deployment needed.
 
-Exposes `POST /api/method/carevibes_pos.api.exchange_token` which:
+### Steps
 
-1. Accepts a Supabase `access_token`
-2. Validates it against the carevibes-auth-ui bridge's `/api/bridge/userinfo` endpoint
+1. Go to `https://carevibes.m.frappe.cloud/app/server-script/new`
+
+2. Fill in the fields:
+   - **Script Type**: API
+   - **API Method**: `pos_exchange_token`
+   - **Allow Guest**: checked (yes)
+
+3. Copy the script body from [server-script.py](./server-script.py) into the **Script** field
+   (everything below the "Paste everything below" comment)
+
+4. Save
+
+The endpoint will be available at:
+```
+POST https://carevibes.m.frappe.cloud/api/method/pos_exchange_token
+```
+
+### What it does
+
+1. Accepts a Supabase `access_token` in the request body
+2. Validates it against carevibes-auth-ui's `/api/bridge/userinfo` endpoint
 3. Finds the matching ERPNext user by email
 4. Creates an OAuth Bearer Token (8-hour expiry) for that user
 5. Returns the Bearer token for ERPNext API access
 
-## Installation
+### Test it
+
+```bash
+curl -X POST https://carevibes.m.frappe.cloud/api/method/pos_exchange_token \
+  -H "Content-Type: application/json" \
+  -d '{"supabase_token": "YOUR_SUPABASE_ACCESS_TOKEN"}'
+```
+
+---
+
+## Alternative: Custom Frappe App
+
+If you prefer a custom app (for version control, testing, etc.), see [carevibes_pos/api.py](./carevibes_pos/api.py). Install with:
 
 ```bash
 bench get-app /path/to/frappe-app
 bench --site your-site install-app carevibes_pos
 ```
-
-## Configuration
-
-Add to your site's `site_config.json` (optional):
-
-```json
-{
-  "bridge_userinfo_url": "https://carevibes-auth.netlify.app/api/bridge/userinfo"
-}
-```
-
-If not set, defaults to `https://carevibes-auth.netlify.app/api/bridge/userinfo`.

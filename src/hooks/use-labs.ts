@@ -1,0 +1,19 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { erpnext } from "@/lib/erpnext/client";
+import type { ERPNextSupplier } from "@/types/erpnext";
+
+export function useLabs() {
+  return useQuery<ERPNextSupplier[]>({
+    queryKey: ["labs"],
+    queryFn: () =>
+      erpnext.getList<ERPNextSupplier>("Supplier", {
+        fields: ["name", "supplier_name", "custom_supplier_type__care_"],
+        filters: [["custom_supplier_type__care_", "=", "Lab"]],
+        limit: 100,
+        orderBy: "supplier_name asc",
+      }),
+    staleTime: 30 * 60 * 1000,
+  });
+}
