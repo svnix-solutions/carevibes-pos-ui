@@ -11,6 +11,7 @@ interface CartState {
   payments: PaymentLine[];
   discount: number;
   selectedLab: ERPNextSupplier | null;
+  selectedDoctor: ERPNextSupplier | null;
 
   setPatient: (patient: ERPNextPatient | null) => void;
   addItem: (item: Omit<CartItem, "quantity">) => void;
@@ -21,6 +22,7 @@ interface CartState {
   clearPayments: () => void;
   setDiscount: (discount: number) => void;
   setLab: (lab: ERPNextSupplier | null) => void;
+  setDoctor: (doctor: ERPNextSupplier | null) => void;
   clearCart: () => void;
 }
 
@@ -32,6 +34,7 @@ export const useCartStore = create<CartState>()(
       payments: [],
       discount: 0,
       selectedLab: null,
+      selectedDoctor: null,
 
       setPatient: (patient) => set({ patient }),
 
@@ -81,6 +84,8 @@ export const useCartStore = create<CartState>()(
 
       setLab: (lab) => set({ selectedLab: lab }),
 
+      setDoctor: (doctor) => set({ selectedDoctor: doctor }),
+
       clearCart: () =>
         set({
           patient: null,
@@ -88,6 +93,7 @@ export const useCartStore = create<CartState>()(
           payments: [],
           discount: 0,
           selectedLab: null,
+          selectedDoctor: null,
         }),
     }),
     {
@@ -96,6 +102,7 @@ export const useCartStore = create<CartState>()(
         patient: state.patient,
         items: state.items,
         selectedLab: state.selectedLab,
+        selectedDoctor: state.selectedDoctor,
       }),
     }
   )

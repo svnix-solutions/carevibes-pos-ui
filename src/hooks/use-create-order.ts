@@ -9,6 +9,7 @@ interface CreateOrderInput {
   patient: ERPNextPatient;
   items: CartItem[];
   payments: PaymentLine[];
+  doctor?: string; // Supplier name for custom_doctor field on Sales Order
 }
 
 interface CreateOrderResult {
@@ -20,7 +21,7 @@ export function useCreateOrder() {
   const queryClient = useQueryClient();
 
   return useMutation<CreateOrderResult, Error, CreateOrderInput>({
-    mutationFn: async ({ patient, items, payments }) => {
+    mutationFn: async ({ patient, items, payments, doctor }) => {
       const today = new Date().toISOString().split("T")[0];
 
       // Step 1: Create Sales Order
@@ -32,6 +33,7 @@ export function useCreateOrder() {
           transaction_date: today,
           delivery_date: today,
           order_type: "Sales",
+          ...(doctor && { custom_doctor: doctor }),
           items: items.map((item) => ({
             item_code: item.item_code,
             item_name: item.item_name,

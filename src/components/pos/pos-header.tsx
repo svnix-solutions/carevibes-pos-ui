@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/hooks/use-session";
 import { PatientSearch } from "./patient-search";
+import { DoctorSelector } from "./doctor-selector";
 
 export function POSHeader() {
   const router = useRouter();
@@ -20,6 +21,7 @@ export function POSHeader() {
       <div className="flex items-center gap-4">
         <h1 className="text-lg font-bold tracking-tight">CareVibes POS</h1>
         <PatientSearch />
+        <DoctorSelector />
       </div>
 
       <div className="flex items-center gap-3">

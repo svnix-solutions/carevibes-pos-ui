@@ -28,6 +28,7 @@ interface PaymentDialogProps {
 export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   const items = useCartStore((s) => s.items);
   const patient = useCartStore((s) => s.patient);
+  const selectedDoctor = useCartStore((s) => s.selectedDoctor);
   const discount = useCartStore((s) => s.discount);
   const clearCart = useCartStore((s) => s.clearCart);
 
@@ -79,6 +80,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
         patient,
         items,
         payments: paymentLines,
+        doctor: selectedDoctor?.name,
       });
       setOrderResult(result);
       setShowReceipt(true);
