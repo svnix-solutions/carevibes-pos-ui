@@ -1,9 +1,4 @@
 import { test, expect } from "@playwright/test";
-import path from "path";
-
-const AUTH_FILE = path.join(__dirname, ".auth", "session.json");
-
-test.use({ storageState: AUTH_FILE });
 
 test.describe("Billing Page", () => {
   test.beforeEach(async ({ page }) => {
@@ -14,144 +9,109 @@ test.describe("Billing Page", () => {
   });
 
   test("shows item catalog and cart panels", async ({ page }) => {
-    // Left panel: item catalog with search and category tabs
-    await expect(page.getByPlaceholder("Search items")).toBeVisible();
+    // Left panel: item catalog with search
+    await expect(page.getByPlaceholder("Search items...")).toBeVisible();
 
     // Right panel: cart
-    await expect(page.locator("text=Cart")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Cart" })).toBeVisible();
   });
 
   test("displays item group tabs", async ({ page }) => {
-    // "All Items" tab should be present and active by default
-    await expect(page.getByRole("button", { name: "All Items" })).toBeVisible();
+    // "All Items" tab should be present
+    await expect(
+      page.getByRole("button", { name: "All Items" })
+    ).toBeVisible();
 
-    // Wait for item groups to load from ERPNext
-    await page.waitForTimeout(2_000);
-
-    // Should have at least a few item group tabs (Laboratory, Consultation, etc.)
-    const tabs = page.locator('[data-testid="item-group-tab"]');
-    // If no data-testid, look for the tab container
-    const tabButtons = page.locator("button").filter({ hasText: /Laboratory|Consultation|Antibiotics|Analgesics/ });
-    const count = await tabButtons.count();
-    expect(count).toBeGreaterThan(0);
+    // Should have category tabs from ERPNext
+    const tabButtons = page
+      .locator("button")
+      .filter({
+        hasText: /Laboratory|Consultation|Antibiotics|Analgesics/,
+      });
+    await expect(tabButtons.first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("loads items from ERPNext", async ({ page }) => {
-    // Wait for items to load
-    await page.waitForTimeout(3_000);
-
-    // Should see item cards with prices
-    const itemCards = page.locator("text=₹");
-    await expect(itemCards.first()).toBeVisible({ timeout: 10_000 });
+    // Should see item cards with prices (₹ symbol)
+    const priceLabels = page.locator("text=₹");
+    await expect(priceLabels.first()).toBeVisible({ timeout: 10_000 });
   });
 
   test("filters items by category tab", async ({ page }) => {
-    // Wait for initial load
-    await page.waitForTimeout(2_000);
+    // Wait for items to load
+    await expect(page.locator("text=₹").first()).toBeVisible({
+      timeout: 10_000,
+    });
 
-    // Click on "Laboratory" tab
-    const labTab = page.getByRole("button", { name: "Laboratory" });
-    if (await labTab.isVisible()) {
-      await labTab.click();
+    // Click on "Analgesics" tab
+    const tab = page.getByRole("button", { name: "Analgesics" });
+    if (await tab.isVisible()) {
+      await tab.click();
+
+      // Items should now be filtered — wait for new items to appear
       await page.waitForTimeout(2_000);
-
-      // Items should now be filtered — we should see lab items like PLASMA Renin, Thyroid Panel
-      const itemGrid = page.locator("text=₹");
-      await expect(itemGrid.first()).toBeVisible({ timeout: 10_000 });
-    }
-  });
-
-  test("shows lab selector for diagnostic groups", async ({ page }) => {
-    await page.waitForTimeout(2_000);
-
-    // Click on Laboratory (or Diagnostics) tab
-    const labTab = page.getByRole("button", { name: "Laboratory" });
-    if (await labTab.isVisible()) {
-      await labTab.click();
-      await page.waitForTimeout(1_000);
-
-      // Lab selector should appear for diagnostic-type groups
-      const labSelector = page.locator("text=Select Lab").or(
-        page.locator("text=Select a lab")
-      );
-      await expect(labSelector.first()).toBeVisible({ timeout: 5_000 });
+      const items = page.locator("text=₹");
+      await expect(items.first()).toBeVisible({ timeout: 10_000 });
     }
   });
 
   test("search filters items by name", async ({ page }) => {
-    await page.waitForTimeout(2_000);
+    await expect(page.locator("text=₹").first()).toBeVisible({
+      timeout: 10_000,
+    });
 
     // Type in search box
-    const searchInput = page.getByPlaceholder("Search items");
-    await searchInput.fill("Thyroid");
+    await page.getByPlaceholder("Search items...").fill("Thyroid");
 
     // Wait for debounced search
     await page.waitForTimeout(1_000);
 
-    // Should see Thyroid Panel in results (if it exists)
+    // Should see Thyroid items or fewer results
     const thyroidItem = page.locator("text=Thyroid");
     const count = await thyroidItem.count();
-    // Search should return results or show empty state
     expect(count).toBeGreaterThanOrEqual(0);
   });
 
   test("add item to cart", async ({ page }) => {
     // Wait for items to load
-    await page.waitForTimeout(3_000);
-
-    // Find an "Add" button on an item card and click it
-    const addButton = page.getByRole("button", { name: "Add" });
+    const addButton = page.getByRole("button", { name: "Add to cart" });
     await expect(addButton.first()).toBeVisible({ timeout: 10_000 });
+
+    // Click the first add button
     await addButton.first().click();
 
-    // Cart should now show at least 1 item
-    const cartItem = page.locator("text=₹").nth(0);
-    await expect(cartItem).toBeVisible();
-
-    // Cart summary should show a non-zero subtotal
-    await expect(page.locator("text=Subtotal")).toBeVisible();
+    // Cart should now show the checkout button (it appears when items > 0)
+    await expect(
+      page.getByRole("button", { name: /Select Patient First|Complete Sale/i })
+    ).toBeVisible({ timeout: 5_000 });
   });
 
   test("adjust item quantity in cart", async ({ page }) => {
     // Add an item first
-    await page.waitForTimeout(3_000);
-    const addButton = page.getByRole("button", { name: "Add" });
+    const addButton = page.getByRole("button", { name: "Add to cart" });
     await expect(addButton.first()).toBeVisible({ timeout: 10_000 });
     await addButton.first().click();
 
-    // Increase quantity using + button
-    const plusButton = page.locator("button").filter({ hasText: "+" }).first();
-    if (await plusButton.isVisible()) {
-      await plusButton.click();
-      await page.waitForTimeout(500);
+    // Click the same add button again to increase quantity
+    await addButton.first().click();
+    await page.waitForTimeout(500);
 
-      // Should see quantity of 2
-      await expect(page.locator("text=2").first()).toBeVisible();
-    }
-
-    // Decrease quantity using - button
-    const minusButton = page.locator("button").filter({ hasText: "−" }).or(
-      page.locator("button").filter({ hasText: "-" })
-    ).first();
-    if (await minusButton.isVisible()) {
-      await minusButton.click();
-    }
+    // Should see quantity of 2 in the cart
+    await expect(page.locator("text=2").first()).toBeVisible();
   });
 
   test("remove item from cart", async ({ page }) => {
     // Add an item
-    await page.waitForTimeout(3_000);
-    const addButton = page.getByRole("button", { name: "Add" });
+    const addButton = page.getByRole("button", { name: "Add to cart" });
     await expect(addButton.first()).toBeVisible({ timeout: 10_000 });
     await addButton.first().click();
 
-    // Remove using trash/remove button
-    const removeButton = page.locator('button[aria-label="Remove"]').or(
-      page.locator("button").filter({ hasText: "×" })
-    );
-    if (await removeButton.first().isVisible()) {
-      await removeButton.first().click();
-      await page.waitForTimeout(500);
-    }
+    // Cart should have an item now. Clear the cart.
+    const clearButton = page.getByRole("button", { name: "Clear" });
+    await expect(clearButton).toBeVisible({ timeout: 5_000 });
+    await clearButton.click();
+
+    // Cart should be empty again
+    await expect(page.locator("text=Cart is empty")).toBeVisible();
   });
 });

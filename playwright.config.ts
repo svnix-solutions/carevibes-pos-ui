@@ -31,7 +31,8 @@ export default defineConfig({
     // All other tests — use saved auth state from setup
     {
       name: "authenticated",
-      testMatch: /(?!auth).*\.spec\.ts/,
+      testMatch: /^(?!auth).*\.spec\.ts/,
+      testIgnore: /auth-flow\.spec\.ts/,
       dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],

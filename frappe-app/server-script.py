@@ -10,46 +10,50 @@
 # This makes the endpoint available at:
 #   POST /api/method/pos_exchange_token
 #
+# Prerequisites:
+#   1. OAuth Client "CareVibes POS" (client_id: 26jdbskjl9) created in ERPNext
+#   2. Bridge userinfo endpoint accessible at carevibes-auth.netlify.app
+#
 # After creating, the POS app calls this endpoint with a Supabase access_token
 # and receives an ERPNext OAuth Bearer Token in return.
 #
+# RestrictedPython notes:
+#   - No import statements allowed
+#   - Use frappe.utils.generate_hash (NOT frappe.generate_hash)
+#   - Use frappe.make_get_request (NOT requests.get)
+#   - No isinstance/hasattr/type builtins
+#   - Use string concatenation (NOT f-strings with complex expressions)
+#
 # ------- Paste everything below this line into the Script field -------
-
-import requests as req
 
 supabase_token = frappe.form_dict.get("supabase_token")
 if not supabase_token:
     frappe.throw("Missing supabase_token", frappe.AuthenticationError)
 
-# Validate Supabase token against the bridge's userinfo endpoint
 bridge_url = "https://carevibes-auth.netlify.app/api/bridge/userinfo"
 try:
-    resp = req.get(
+    user_info = frappe.make_get_request(
         bridge_url,
-        headers={"Authorization": f"Bearer {supabase_token}"},
-        timeout=10,
+        headers={"Authorization": "Bearer " + supabase_token},
     )
-except Exception:
-    frappe.throw("Failed to validate token with auth bridge", frappe.AuthenticationError)
-
-if resp.status_code != 200:
+except Exception as e:
     frappe.throw("Invalid or expired Supabase token", frappe.AuthenticationError)
 
-user_info = resp.json()
 email = user_info.get("email")
-
 if not email:
-    frappe.throw("No email found in token", frappe.AuthenticationError)
+    frappe.throw("No email in token", frappe.AuthenticationError)
 
 if not frappe.db.exists("User", email):
-    frappe.throw(f"User {email} not found in ERPNext", frappe.AuthenticationError)
+    frappe.throw("User not found in ERPNext", frappe.AuthenticationError)
 
-# Create an ERPNext OAuth Bearer Token (8 hours = POS shift)
-access_token = frappe.generate_hash(length=40)
+# Generate token using frappe.utils (not frappe.generate_hash — blocked by RestrictedPython)
+access_token = frappe.utils.generate_hash(length=40)
 
+# OAuth Client "CareVibes POS" must exist — required for Bearer token validation
 bearer = frappe.get_doc({
     "doctype": "OAuth Bearer Token",
     "access_token": access_token,
+    "client": "26jdbskjl9",
     "user": email,
     "scopes": "all openid",
     "expiration_time": frappe.utils.add_to_date(frappe.utils.now_datetime(), hours=8),

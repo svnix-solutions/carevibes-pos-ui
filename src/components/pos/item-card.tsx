@@ -37,7 +37,7 @@ export function ItemCard({ item, supplier }: ItemCardProps) {
         <span className="text-sm font-semibold">
           {formatCurrency(item.standard_rate || 0)}
         </span>
-        <Button size="icon" variant="outline" className="h-7 w-7" onClick={handleAdd}>
+        <Button size="icon" variant="outline" className="h-7 w-7" onClick={handleAdd} aria-label="Add to cart">
           <Plus className="h-3.5 w-3.5" />
         </Button>
       </div>

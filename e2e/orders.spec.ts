@@ -1,9 +1,4 @@
 import { test, expect } from "@playwright/test";
-import path from "path";
-
-const AUTH_FILE = path.join(__dirname, ".auth", "session.json");
-
-test.use({ storageState: AUTH_FILE });
 
 test.describe("Order History", () => {
   test("navigate to orders page", async ({ page }) => {
@@ -20,9 +15,9 @@ test.describe("Order History", () => {
     await page.waitForTimeout(3_000);
 
     // Should show either order cards or "No orders" message
-    const content = page.locator("text=No orders").or(
-      page.locator("text=₹")
-    );
+    const content = page
+      .locator("text=No orders")
+      .or(page.locator("text=₹"));
     await expect(content.first()).toBeVisible({ timeout: 10_000 });
   });
 
@@ -31,9 +26,9 @@ test.describe("Order History", () => {
     await page.waitForTimeout(2_000);
 
     // Click on billing link/tab
-    const billingLink = page.locator("a[href='/billing']").or(
-      page.getByRole("link", { name: /billing|pos|back/i })
-    );
+    const billingLink = page
+      .locator("a[href='/billing']")
+      .or(page.getByRole("link", { name: /billing|pos|back/i }));
     if (await billingLink.first().isVisible()) {
       await billingLink.first().click();
       await page.waitForURL("**/billing");

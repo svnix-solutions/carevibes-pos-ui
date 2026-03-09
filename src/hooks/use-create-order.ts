@@ -28,7 +28,7 @@ export function useCreateOrder() {
         "Sales Order",
         {
           customer: patient.customer,
-          company: "CareVibes",
+          company: "Care Vibes",
           transaction_date: today,
           delivery_date: today,
           order_type: "Sales",
@@ -52,7 +52,7 @@ export function useCreateOrder() {
         "Sales Invoice",
         {
           customer: patient.customer,
-          company: "CareVibes",
+          company: "Care Vibes",
           posting_date: today,
           is_pos: 1,
           items: items.map((item) => ({

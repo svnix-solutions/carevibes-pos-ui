@@ -1,11 +1,9 @@
-import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { getAuthConfig } from "@/lib/auth/config";
 import { setStateCookie } from "@/lib/auth/cookies";
 
-export const dynamic = "force-dynamic";
-
-export default async function LoginPage() {
+export async function GET() {
   const config = getAuthConfig();
 
   // Generate random state for CSRF protection
@@ -19,5 +17,5 @@ export default async function LoginPage() {
   authorizeUrl.searchParams.set("state", state);
 
   // Redirect to carevibes-auth-ui bridge (Supabase login)
-  redirect(authorizeUrl.toString());
+  return NextResponse.redirect(authorizeUrl.toString());
 }

@@ -24,6 +24,15 @@ setup("authenticate via bridge", async ({ page }) => {
   await page.locator("#password").fill("SVNIX_Shubhankar");
   await page.locator('button[type="submit"]').click();
 
+  // After login, Supabase OAuth may show a consent page — click "Allow Access"
+  const allowButton = page.getByRole("button", { name: "Allow Access" });
+  try {
+    await allowButton.waitFor({ timeout: 10_000 });
+    await allowButton.click();
+  } catch {
+    // Consent was auto-approved — continue
+  }
+
   // Wait for the OAuth redirect chain to complete:
   // Supabase → bridge callback → bridge consent → POS /auth/callback → /billing
   await page.waitForURL("**/billing", { timeout: 30_000 });

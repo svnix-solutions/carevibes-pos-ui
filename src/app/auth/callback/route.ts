@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     const bridgeTokenRes = await fetch(config.bridgeTokenUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code }),
+      body: JSON.stringify({ grant_type: "authorization_code", code }),
     });
 
     if (!bridgeTokenRes.ok) {

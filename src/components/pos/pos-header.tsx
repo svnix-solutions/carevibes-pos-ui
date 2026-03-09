@@ -28,7 +28,7 @@ export function POSHeader() {
             {session.full_name}
           </span>
         )}
-        <Button variant="ghost" size="icon" onClick={handleLogout}>
+        <Button variant="ghost" size="icon" onClick={handleLogout} aria-label="Logout">
           <LogOut className="h-4 w-4" />
         </Button>
       </div>
