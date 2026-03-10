@@ -6,7 +6,6 @@ export interface CartItem {
   uom: string;
   image?: string;
   item_group?: string;
-  supplier?: string; // Lab/supplier for diagnostic items
 }
 
 export type PaymentMethod = "Cash" | "UPI" | "Card";

@@ -58,8 +58,14 @@ function getCategoryColor(groupName: string): CategoryColor {
   return DEFAULT_COLOR;
 }
 
+const HIDDEN_GROUPS = ["commission", "services", "sub assemblies", "products", "raw material"];
+
 export function ItemGroupSidebar({ selected, onSelect }: ItemGroupTabsProps) {
   const { data: groups, isLoading } = useItemGroups();
+
+  const visibleGroups = groups?.filter(
+    (g) => !HIDDEN_GROUPS.includes(g.name.toLowerCase())
+  );
 
   if (isLoading) {
     return (
@@ -86,7 +92,7 @@ export function ItemGroupSidebar({ selected, onSelect }: ItemGroupTabsProps) {
           >
             All Items
           </button>
-          {groups?.map((group) => {
+          {visibleGroups?.map((group) => {
             const color = getCategoryColor(group.name);
             const isSelected = selected === group.name;
             return (

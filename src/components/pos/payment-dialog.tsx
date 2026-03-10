@@ -104,11 +104,14 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   }
 
   function handleClose() {
-    if (!showReceipt) {
-      setPaymentLines([]);
-      setAmountInput("");
-      setReference("");
+    if (showReceipt) {
+      // Order was completed — clear everything
+      handleNewSale();
+      return;
     }
+    setPaymentLines([]);
+    setAmountInput("");
+    setReference("");
     onOpenChange(false);
   }
 

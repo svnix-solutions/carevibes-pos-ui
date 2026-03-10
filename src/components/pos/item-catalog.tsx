@@ -1,37 +1,34 @@
 "use client";
 
-import { forwardRef, useState } from "react";
+import { forwardRef, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useItems } from "@/hooks/use-items";
-import { useCartStore } from "@/lib/cart/store";
+import { useStockLevels } from "@/hooks/use-stock-levels";
 import { ItemGroupSidebar } from "./item-group-tabs";
-import { LabSelector, DIAGNOSTIC_GROUPS } from "./lab-selector";
 import { ItemCard } from "./item-card";
 
 export const ItemCatalog = forwardRef<HTMLInputElement>(
   function ItemCatalog(_props, ref) {
     const [search, setSearch] = useState("");
     const [selectedGroup, setSelectedGroup] = useState<string | undefined>();
-    const selectedLab = useCartStore((s) => s.selectedLab);
 
-    const needsLab =
-      selectedGroup &&
-      DIAGNOSTIC_GROUPS.some((g) =>
-        selectedGroup.toLowerCase().includes(g.toLowerCase())
-      );
+    const { data: items, isLoading } = useItems(search, selectedGroup);
 
-    const supplierFilter = needsLab ? selectedLab?.name : undefined;
-
-    const { data: items, isLoading } = useItems(
-      search,
-      selectedGroup,
-      supplierFilter
+    const stockItemCodes = useMemo(
+      () =>
+        (items ?? [])
+          .filter((item) => item.is_stock_item === 1)
+          .map((item) => item.name),
+      [items]
     );
 
-    const showLabPrompt = needsLab && !selectedLab;
+    const { data: stockMap, isFetching: stockFetching } = useStockLevels(stockItemCodes);
+
+    // True when stock items exist but data hasn't arrived yet
+    const stockPending = stockItemCodes.length > 0 && !stockMap;
 
     return (
       <div className="flex h-full overflow-hidden">
@@ -40,7 +37,7 @@ export const ItemCatalog = forwardRef<HTMLInputElement>(
 
         {/* Right: Search + item grid */}
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          {/* Search bar + lab selector */}
+          {/* Search bar */}
           <div className="flex shrink-0 items-center gap-3 px-4 pt-3 pb-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -55,17 +52,12 @@ export const ItemCatalog = forwardRef<HTMLInputElement>(
                 /
               </kbd>
             </div>
-            <LabSelector selectedGroup={selectedGroup} />
           </div>
 
           {/* Item grid */}
           <ScrollArea className="min-h-0 flex-1">
             <div className="p-4">
-              {showLabPrompt ? (
-                <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
-                  Please select a lab to view items
-                </div>
-              ) : isLoading ? (
+              {isLoading ? (
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4">
                   {Array.from({ length: 8 }).map((_, i) => (
                     <Skeleton key={i} className="h-[100px] rounded-lg" />
@@ -81,7 +73,13 @@ export const ItemCatalog = forwardRef<HTMLInputElement>(
                     <ItemCard
                       key={item.name}
                       item={item}
-                      supplier={supplierFilter}
+                      stockQty={
+                        item.is_stock_item === 1
+                          ? stockPending
+                            ? null
+                            : stockMap?.get(item.name) ?? 0
+                          : undefined
+                      }
                     />
                   ))}
                 </div>

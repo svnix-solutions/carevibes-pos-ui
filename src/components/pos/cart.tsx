@@ -9,6 +9,7 @@ import { CartItem } from "./cart-item";
 import { CartSummary } from "./cart-summary";
 import { PatientSearch } from "./patient-search";
 import { DoctorSelector } from "./doctor-selector";
+import { LabSelector } from "./lab-selector";
 
 interface CartProps {
   onCheckout: () => void;
@@ -29,6 +30,7 @@ export function Cart({ onCheckout }: CartProps) {
       <div className="space-y-2 border-b px-4 py-3">
         <PatientSearch />
         <DoctorSelector />
+        <LabSelector />
       </div>
 
       {/* Cart header */}

@@ -6,6 +6,7 @@ export interface ERPNextItem {
   image?: string;
   stock_uom: string;
   standard_rate?: number;
+  is_stock_item?: 0 | 1;
 }
 
 export interface ERPNextItemGroup {
@@ -126,6 +127,11 @@ export interface ERPNextPractitioner {
 
 export interface ERPNextAppointmentType {
   name: string;
+}
+
+export interface ERPNextBin {
+  item_code: string;
+  actual_qty: number;
 }
 
 export interface ERPNextListResponse<T> {

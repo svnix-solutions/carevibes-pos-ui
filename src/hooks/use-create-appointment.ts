@@ -11,6 +11,7 @@ interface CreateAppointmentInput {
   appointment_date: string;
   appointment_time: string;
   appointment_for: string;
+  duration?: number;
   department?: string;
   notes?: string;
 }
@@ -22,6 +23,7 @@ export function useCreateAppointment() {
     mutationFn: async (input) =>
       erpnext.createDoc<ERPNextAppointment>("Patient Appointment", {
         ...input,
+        duration: input.duration ?? 15,
         company: "Care Vibes",
       }),
     onSuccess: (_data, variables) => {

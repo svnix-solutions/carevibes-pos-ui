@@ -8,6 +8,31 @@ class ApiError extends Error {
   }
 }
 
+/** Extract a human-readable message from an ERPNext error response body. */
+function parseErpNextError(body: string): string {
+  try {
+    const json = JSON.parse(body);
+    // _server_messages is a JSON-encoded array of JSON-encoded message objects
+    if (json._server_messages) {
+      const msgs: string[] = JSON.parse(json._server_messages);
+      const first = JSON.parse(msgs[0]);
+      if (first?.message) {
+        // Strip HTML tags for a clean toast message
+        return first.message.replace(/<[^>]*>/g, "");
+      }
+    }
+    if (json.message) return json.message;
+    if (json.exception) {
+      // "frappe.exceptions.ValidationError: Actual message"
+      const parts = json.exception.split(": ");
+      return parts.length > 1 ? parts.slice(1).join(": ").replace(/<[^>]*>/g, "") : parts[0];
+    }
+  } catch {
+    // not JSON — return as-is
+  }
+  return body.slice(0, 200);
+}
+
 class ERPNextClient {
   private baseUrl = "/api/erpnext";
 
@@ -28,7 +53,7 @@ class ERPNextClient {
 
     if (!res.ok) {
       const text = await res.text();
-      throw new ApiError(res.status, text);
+      throw new ApiError(res.status, parseErpNextError(text));
     }
 
     const json = await res.json();
@@ -50,7 +75,7 @@ class ERPNextClient {
 
     if (!res.ok) {
       const text = await res.text();
-      throw new ApiError(res.status, text);
+      throw new ApiError(res.status, parseErpNextError(text));
     }
 
     const json = await res.json();
@@ -112,7 +137,7 @@ class ERPNextClient {
 
     if (!res.ok) {
       const text = await res.text();
-      throw new ApiError(res.status, text);
+      throw new ApiError(res.status, parseErpNextError(text));
     }
 
     const json = await res.json();
@@ -148,7 +173,7 @@ class ERPNextClient {
       try {
         const freshDoc = await this.getDoc<Record<string, unknown>>(doctype, name);
         await this.callMethod("frappe.client.submit", {
-          doc: { doctype, name, modified: freshDoc.modified },
+          doc: JSON.stringify(freshDoc),
         });
         return;
       } catch (err) {

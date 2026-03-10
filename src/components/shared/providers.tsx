@@ -20,7 +20,7 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       {children}
-      <Toaster position="top-right" />
+      <Toaster position="bottom-right" duration={3000} visibleToasts={3} />
     </QueryClientProvider>
   );
 }

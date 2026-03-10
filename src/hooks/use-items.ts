@@ -5,15 +5,11 @@ import { erpnext } from "@/lib/erpnext/client";
 import { useDebouncedValue } from "./use-debounced-value";
 import type { ERPNextItem } from "@/types/erpnext";
 
-export function useItems(
-  search: string,
-  itemGroup?: string,
-  supplier?: string
-) {
+export function useItems(search: string, itemGroup?: string) {
   const debouncedSearch = useDebouncedValue(search, 300);
 
   return useQuery<ERPNextItem[]>({
-    queryKey: ["items", debouncedSearch, itemGroup, supplier],
+    queryKey: ["items", debouncedSearch, itemGroup],
     queryFn: async () => {
       const filters: unknown[] = [];
 
@@ -22,25 +18,6 @@ export function useItems(
       }
       if (debouncedSearch) {
         filters.push(["item_name", "like", `%${debouncedSearch}%`]);
-      }
-
-      // If a supplier is selected, we need to get items from that supplier
-      // via the Item Supplier child table or Item Default
-      if (supplier) {
-        // First get item codes from Item Supplier
-        const itemSuppliers = await erpnext.getList<{ parent: string }>(
-          "Item Supplier",
-          {
-            fields: ["parent"],
-            filters: [["supplier", "=", supplier]],
-            limit: 200,
-          }
-        );
-
-        if (itemSuppliers.length === 0) return [];
-
-        const itemCodes = itemSuppliers.map((is) => is.parent);
-        filters.push(["name", "in", itemCodes]);
       }
 
       return erpnext.getList<ERPNextItem>("Item", {
@@ -52,6 +29,7 @@ export function useItems(
           "stock_uom",
           "standard_rate",
           "description",
+          "is_stock_item",
         ],
         filters,
         limit: 50,

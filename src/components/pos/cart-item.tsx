@@ -3,7 +3,6 @@
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/cart/calculations";
 import { useCartStore } from "@/lib/cart/store";
 import type { CartItem as CartItemType } from "@/lib/cart/types";
@@ -35,11 +34,6 @@ export function CartItem({ item }: CartItemProps) {
             <Trash2 className="h-3 w-3" />
           </Button>
         </div>
-        {item.supplier && (
-          <Badge variant="secondary" className="mt-0.5 text-[10px]">
-            {item.supplier}
-          </Badge>
-        )}
         <div className="mt-1 flex items-center justify-between">
           <div className="flex items-center gap-1">
             <Button
