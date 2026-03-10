@@ -19,17 +19,17 @@ export function DoctorSelector() {
 
   if (doctor) {
     return (
-      <div className="flex items-center gap-2 rounded-md border bg-blue-50 px-3 py-1.5 dark:bg-blue-950/30">
-        <Stethoscope className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-        <span className="text-sm font-medium">{doctor.supplier_name}</span>
+      <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 dark:border-blue-800 dark:bg-blue-950/30">
+        <Stethoscope className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+        <span className="min-w-0 flex-1 truncate text-sm font-medium">{doctor.supplier_name}</span>
         <Button
           variant="ghost"
           size="icon"
-          className="ml-1 h-5 w-5"
+          className="h-6 w-6 shrink-0"
           onClick={() => setDoctor(null)}
           aria-label="Clear doctor"
         >
-          <X className="h-3 w-3" />
+          <X className="h-3.5 w-3.5" />
         </Button>
       </div>
     );
@@ -43,7 +43,7 @@ export function DoctorSelector() {
         setDoctor(selected || null);
       }}
     >
-      <SelectTrigger className="w-[180px]" aria-label="Select Doctor">
+      <SelectTrigger className="w-full" aria-label="Select Doctor">
         <Stethoscope className="h-4 w-4 shrink-0" />
         <SelectValue
           placeholder={isLoading ? "Loading..." : "Select Doctor"}

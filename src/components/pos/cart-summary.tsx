@@ -32,9 +32,9 @@ export function CartSummary({ totals }: CartSummaryProps) {
         </div>
       )}
       <Separator />
-      <div className="flex justify-between text-base font-bold">
+      <div className="flex justify-between text-lg font-bold">
         <span>Total</span>
-        <span>{formatCurrency(totals.grandTotal)}</span>
+        <span className="text-primary">{formatCurrency(totals.grandTotal)}</span>
       </div>
     </div>
   );

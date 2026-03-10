@@ -97,12 +97,71 @@ class ERPNextClient {
     return this.get<T>(`api/resource/${doctype}/${encodeURIComponent(name)}`);
   }
 
+  async put<T>(path: string, body: unknown): Promise<T> {
+    const url = `${this.baseUrl}/${path}`;
+    const res = await fetch(url, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (res.status === 401) {
+      window.location.href = "/login";
+      throw new ApiError(401, "Session expired");
+    }
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new ApiError(res.status, text);
+    }
+
+    const json = await res.json();
+    return json.data ?? json;
+  }
+
   async createDoc<T>(doctype: string, doc: Record<string, unknown>): Promise<T> {
     return this.post<T>(`api/resource/${doctype}`, doc);
   }
 
+  async updateDoc<T>(
+    doctype: string,
+    name: string,
+    fields: Record<string, unknown>
+  ): Promise<T> {
+    return this.put<T>(
+      `api/resource/${doctype}/${encodeURIComponent(name)}`,
+      fields
+    );
+  }
+
   async callMethod<T>(method: string, args?: Record<string, unknown>): Promise<T> {
     return this.post<T>(`api/method/${method}`, args || {});
+  }
+
+  /**
+   * Submit a document with retry on TimestampMismatchError.
+   * Frappe hooks can modify a doc between create and submit, causing stale
+   * timestamps. This re-fetches the doc on each retry to get the latest version.
+   */
+  async submitDoc(doctype: string, name: string, maxRetries = 3): Promise<void> {
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const freshDoc = await this.getDoc<Record<string, unknown>>(doctype, name);
+        await this.callMethod("frappe.client.submit", {
+          doc: { doctype, name, modified: freshDoc.modified },
+        });
+        return;
+      } catch (err) {
+        const isTimestampError =
+          err instanceof ApiError &&
+          err.message.includes("TimestampMismatchError");
+        if (isTimestampError && attempt < maxRetries - 1) {
+          await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+          continue;
+        }
+        throw err;
+      }
+    }
   }
 }
 

@@ -4,9 +4,9 @@ test.describe("Order History", () => {
   test("navigate to orders page", async ({ page }) => {
     await page.goto("/orders");
 
-    // Should show orders page heading or empty state
+    // Should show orders page heading
     await expect(
-      page.locator("text=Orders").or(page.locator("text=Today"))
+      page.getByRole("heading", { name: /orders/i })
     ).toBeVisible({ timeout: 10_000 });
   });
 

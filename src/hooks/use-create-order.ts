@@ -10,6 +10,7 @@ interface CreateOrderInput {
   items: CartItem[];
   payments: PaymentLine[];
   doctor?: string; // Supplier name for custom_doctor field on Sales Order
+  lab?: string; // Supplier name for custom_lab field on Sales Order
 }
 
 interface CreateOrderResult {
@@ -21,7 +22,7 @@ export function useCreateOrder() {
   const queryClient = useQueryClient();
 
   return useMutation<CreateOrderResult, Error, CreateOrderInput>({
-    mutationFn: async ({ patient, items, payments, doctor }) => {
+    mutationFn: async ({ patient, items, payments, doctor, lab }) => {
       const today = new Date().toISOString().split("T")[0];
 
       // Step 1: Create Sales Order
@@ -34,6 +35,7 @@ export function useCreateOrder() {
           delivery_date: today,
           order_type: "Sales",
           ...(doctor && { custom_doctor: doctor }),
+          ...(lab && { custom_lab: lab }),
           items: items.map((item) => ({
             item_code: item.item_code,
             item_name: item.item_name,
@@ -44,10 +46,8 @@ export function useCreateOrder() {
         }
       );
 
-      // Step 2: Submit Sales Order
-      await erpnext.callMethod("frappe.client.submit", {
-        doc: { doctype: "Sales Order", name: salesOrder.name },
-      });
+      // Step 2: Submit Sales Order (with retry for TimestampMismatchError)
+      await erpnext.submitDoc("Sales Order", salesOrder.name);
 
       // Step 3: Create Sales Invoice linked to Sales Order
       const salesInvoice = await erpnext.createDoc<{ name: string }>(
@@ -72,10 +72,8 @@ export function useCreateOrder() {
         }
       );
 
-      // Step 4: Submit Sales Invoice
-      await erpnext.callMethod("frappe.client.submit", {
-        doc: { doctype: "Sales Invoice", name: salesInvoice.name },
-      });
+      // Step 4: Submit Sales Invoice (with retry for TimestampMismatchError)
+      await erpnext.submitDoc("Sales Invoice", salesInvoice.name);
 
       return { salesOrder, salesInvoice };
     },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle, Loader2 } from "lucide-react";
+import { CheckCircle, CircleDollarSign, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   const items = useCartStore((s) => s.items);
   const patient = useCartStore((s) => s.patient);
   const selectedDoctor = useCartStore((s) => s.selectedDoctor);
+  const selectedLab = useCartStore((s) => s.selectedLab);
   const discount = useCartStore((s) => s.discount);
   const clearCart = useCartStore((s) => s.clearCart);
 
@@ -51,6 +52,8 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
     .filter((l) => l.method === "Cash")
     .reduce((sum, l) => sum + l.amount, 0);
   const change = calculateChange(cashTendered, totals.grandTotal - paymentLines.filter(l => l.method !== "Cash").reduce((s, l) => s + l.amount, 0));
+
+  const isFullyPaid = remaining <= 0 && totalPaid > 0;
 
   function addPaymentLine() {
     const amount = parseFloat(amountInput);
@@ -81,6 +84,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
         items,
         payments: paymentLines,
         doctor: selectedDoctor?.name,
+        lab: selectedLab?.name,
       });
       setOrderResult(result);
       setShowReceipt(true);
@@ -114,10 +118,21 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-green-600">
-              <CheckCircle className="h-5 w-5" />
+              <CheckCircle className="h-6 w-6" />
               Sale Complete
             </DialogTitle>
           </DialogHeader>
+          <div className="flex flex-col items-center py-2">
+            <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+              <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+            <p className="text-lg font-semibold">
+              {formatCurrency(totals.grandTotal)}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Invoice: {orderResult.salesInvoice.name}
+            </p>
+          </div>
           <Receipt
             invoiceName={orderResult.salesInvoice.name}
             patient={patient!}
@@ -147,16 +162,18 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
         </DialogHeader>
 
         {/* Total */}
-        <div className="rounded-lg bg-muted p-4 text-center">
-          <p className="text-sm text-muted-foreground">Total Amount</p>
-          <p className="text-3xl font-bold">{formatCurrency(totals.grandTotal)}</p>
-          {remaining > 0 && (
-            <p className="mt-1 text-sm text-orange-600">
+        <div className="rounded-xl bg-primary/10 p-5 text-center dark:bg-primary/5">
+          <p className="text-sm font-medium text-muted-foreground">Total Amount</p>
+          <p className="text-4xl font-bold tracking-tight text-primary">
+            {formatCurrency(totals.grandTotal)}
+          </p>
+          {remaining > 0 && totalPaid > 0 && (
+            <p className="mt-1.5 text-sm font-medium text-orange-600 dark:text-orange-400">
               Remaining: {formatCurrency(remaining)}
             </p>
           )}
-          {remaining <= 0 && totalPaid > 0 && change > 0 && (
-            <p className="mt-1 text-sm text-green-600">
+          {isFullyPaid && change > 0 && (
+            <p className="mt-1.5 text-sm font-medium text-green-600 dark:text-green-400">
               Change: {formatCurrency(change)}
             </p>
           )}
@@ -168,7 +185,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
             {paymentLines.map((line, i) => (
               <div
                 key={i}
-                className="flex items-center justify-between rounded border px-3 py-1.5"
+                className="flex items-center justify-between rounded-lg border px-3 py-2 animate-in fade-in slide-in-from-top-1 duration-150"
               >
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">{line.method}</Badge>
@@ -218,13 +235,12 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                size="sm"
                 className="flex-1"
                 onClick={handleFullAmount}
               >
                 Full Amount
               </Button>
-              <Button size="sm" className="flex-1" onClick={addPaymentLine}>
+              <Button className="flex-1" onClick={addPaymentLine}>
                 Add Cash Payment
               </Button>
             </div>
@@ -245,13 +261,12 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                size="sm"
                 className="flex-1"
                 onClick={handleFullAmount}
               >
                 Full Amount
               </Button>
-              <Button size="sm" className="flex-1" onClick={addPaymentLine}>
+              <Button className="flex-1" onClick={addPaymentLine}>
                 Add UPI Payment
               </Button>
             </div>
@@ -272,13 +287,12 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
             <div className="flex gap-2">
               <Button
                 variant="outline"
-                size="sm"
                 className="flex-1"
                 onClick={handleFullAmount}
               >
                 Full Amount
               </Button>
-              <Button size="sm" className="flex-1" onClick={addPaymentLine}>
+              <Button className="flex-1" onClick={addPaymentLine}>
                 Add Card Payment
               </Button>
             </div>
@@ -289,18 +303,24 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
 
         {/* Confirm */}
         <Button
-          size="lg"
-          className="w-full"
+          className={`h-14 w-full text-base font-semibold transition-all ${
+            isFullyPaid
+              ? "bg-green-600 text-white shadow-lg hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700"
+              : ""
+          }`}
           disabled={remaining > 0 || createOrder.isPending}
           onClick={handleConfirm}
         >
           {createOrder.isPending ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               Creating Order...
             </>
           ) : (
-            "Confirm Payment"
+            <>
+              <CircleDollarSign className="mr-2 h-5 w-5" />
+              Confirm Payment
+            </>
           )}
         </Button>
 

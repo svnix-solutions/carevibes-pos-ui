@@ -86,6 +86,48 @@ export interface ERPNextPOSProfile {
   }>;
 }
 
+// --- Appointments ---
+
+export type AppointmentStatus =
+  | "Scheduled"
+  | "Open"
+  | "Confirmed"
+  | "Checked In"
+  | "Checked Out"
+  | "Closed"
+  | "Cancelled"
+  | "No Show";
+
+export interface ERPNextAppointment {
+  name: string;
+  patient: string;
+  patient_name: string;
+  practitioner: string;
+  practitioner_name: string;
+  appointment_date: string;
+  appointment_time: string;
+  appointment_type: string;
+  appointment_for: "Practitioner" | "Department" | "Service Unit";
+  company: string;
+  status: AppointmentStatus;
+  department?: string;
+  duration?: number;
+  invoiced?: 0 | 1;
+  ref_sales_invoice?: string;
+  notes?: string;
+}
+
+export interface ERPNextPractitioner {
+  name: string;
+  practitioner_name: string;
+  supplier?: string;
+  department?: string;
+}
+
+export interface ERPNextAppointmentType {
+  name: string;
+}
+
 export interface ERPNextListResponse<T> {
   data: T[];
 }

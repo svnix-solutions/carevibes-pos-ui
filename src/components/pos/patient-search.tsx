@@ -13,6 +13,15 @@ import { usePatients } from "@/hooks/use-patients";
 import { useCartStore } from "@/lib/cart/store";
 import type { ERPNextPatient } from "@/types/erpnext";
 
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase();
+}
+
 export function PatientSearch() {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -33,21 +42,23 @@ export function PatientSearch() {
 
   if (patient) {
     return (
-      <div className="flex items-center gap-2 rounded-md border bg-primary/5 px-3 py-1.5">
-        <User className="h-4 w-4 text-primary" />
-        <div className="text-sm">
-          <span className="font-medium">{patient.patient_name}</span>
+      <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+          {getInitials(patient.patient_name)}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">{patient.patient_name}</p>
           {patient.mobile && (
-            <span className="ml-2 text-muted-foreground">{patient.mobile}</span>
+            <p className="truncate text-xs text-muted-foreground">{patient.mobile}</p>
           )}
         </div>
         <Button
           variant="ghost"
           size="icon"
-          className="ml-1 h-5 w-5"
+          className="h-6 w-6 shrink-0"
           onClick={handleClear}
         >
-          <X className="h-3 w-3" />
+          <X className="h-3.5 w-3.5" />
         </Button>
       </div>
     );
@@ -56,10 +67,19 @@ export function PatientSearch() {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        render={<Button variant="outline" className="gap-2" />}
+        render={
+          <Button
+            variant="outline"
+            data-patient-trigger
+            className="w-full justify-start gap-2 border-amber-300 bg-amber-50/50 text-amber-800 hover:bg-amber-100/50 dark:border-amber-700 dark:bg-amber-950/20 dark:text-amber-300 dark:hover:bg-amber-900/30"
+          />
+        }
       >
-        <Search className="h-4 w-4" />
+        <User className="h-4 w-4" />
         Select Patient
+        <kbd className="ml-auto hidden rounded border border-amber-300/50 bg-amber-100/50 px-1 py-0.5 text-[10px] font-normal text-amber-700 lg:inline-block dark:border-amber-700/50 dark:bg-amber-900/30 dark:text-amber-400">
+          F2
+        </kbd>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="start">
         <div className="p-2">
@@ -89,10 +109,12 @@ export function PatientSearch() {
           {patients?.map((p) => (
             <button
               key={p.name}
-              className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-accent"
+              className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent"
               onClick={() => handleSelect(p)}
             >
-              <User className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-medium text-primary">
+                {getInitials(p.patient_name)}
+              </div>
               <div className="min-w-0 flex-1">
                 <div className="font-medium">{p.patient_name}</div>
                 <div className="text-xs text-muted-foreground">

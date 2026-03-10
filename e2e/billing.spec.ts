@@ -16,43 +16,41 @@ test.describe("Billing Page", () => {
     await expect(page.getByRole("heading", { name: "Cart" })).toBeVisible();
   });
 
-  test("displays item group tabs", async ({ page }) => {
-    // "All Items" tab should be present
+  test("displays category sidebar with All Items", async ({ page }) => {
+    // "All Items" button should be present in the sidebar
     await expect(
       page.getByRole("button", { name: "All Items" })
     ).toBeVisible();
 
-    // Should have category tabs from ERPNext
-    const tabButtons = page
+    // Should have category buttons from ERPNext
+    const catButtons = page
       .locator("button")
       .filter({
         hasText: /Laboratory|Consultation|Antibiotics|Analgesics/,
       });
-    await expect(tabButtons.first()).toBeVisible({ timeout: 10_000 });
+    await expect(catButtons.first()).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("filters items by category", async ({ page }) => {
+    // Wait for items to load
+    await expect(page.locator("text=₹").first()).toBeVisible({
+      timeout: 10_000,
+    });
+
+    // Click a category in the sidebar
+    const cat = page.getByRole("button", { name: "Analgesics" });
+    if (await cat.isVisible()) {
+      await cat.click();
+      await page.waitForTimeout(2_000);
+      const items = page.locator("text=₹");
+      await expect(items.first()).toBeVisible({ timeout: 10_000 });
+    }
   });
 
   test("loads items from ERPNext", async ({ page }) => {
     // Should see item cards with prices (₹ symbol)
     const priceLabels = page.locator("text=₹");
     await expect(priceLabels.first()).toBeVisible({ timeout: 10_000 });
-  });
-
-  test("filters items by category tab", async ({ page }) => {
-    // Wait for items to load
-    await expect(page.locator("text=₹").first()).toBeVisible({
-      timeout: 10_000,
-    });
-
-    // Click on "Analgesics" tab
-    const tab = page.getByRole("button", { name: "Analgesics" });
-    if (await tab.isVisible()) {
-      await tab.click();
-
-      // Items should now be filtered — wait for new items to appear
-      await page.waitForTimeout(2_000);
-      const items = page.locator("text=₹");
-      await expect(items.first()).toBeVisible({ timeout: 10_000 });
-    }
   });
 
   test("search filters items by name", async ({ page }) => {
