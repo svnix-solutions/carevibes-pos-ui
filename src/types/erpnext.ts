@@ -49,13 +49,32 @@ export interface ERPNextSOItem {
   warehouse?: string;
 }
 
+export type InvoiceStatus =
+  | "Draft"
+  | "Return"
+  | "Credit Note Issued"
+  | "Submitted"
+  | "Paid"
+  | "Partly Paid"
+  | "Unpaid"
+  | "Overdue"
+  | "Cancelled";
+
 export interface ERPNextSalesInvoice {
   name: string;
   customer: string;
+  customer_name?: string;
   company: string;
   posting_date: string;
+  posting_time?: string;
+  creation?: string;
   grand_total: number;
-  status: string;
+  net_total?: number;
+  total_taxes_and_charges?: number;
+  discount_amount?: number;
+  outstanding_amount?: number;
+  paid_amount?: number;
+  status: InvoiceStatus;
   is_pos?: 0 | 1;
   items: ERPNextSIItem[];
   payments?: ERPNextPayment[];

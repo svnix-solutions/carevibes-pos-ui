@@ -35,5 +35,6 @@ export function useAppointments(date?: string) {
         limit: 200,
       }),
     staleTime: 30 * 1000,
+    refetchInterval: 30 * 1000,
   });
 }
