@@ -2,7 +2,7 @@
 
 import { LogOut, Receipt, Calendar, ClipboardList } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/hooks/use-session";
 import { cn } from "@/lib/utils";
@@ -14,13 +14,11 @@ const navItems = [
 ];
 
 export function POSHeader() {
-  const router = useRouter();
   const pathname = usePathname();
   const { data: session } = useSession();
 
-  async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
+  function handleLogout() {
+    window.location.href = "/api/auth/logout";
   }
 
   return (
