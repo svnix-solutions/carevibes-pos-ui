@@ -11,9 +11,10 @@ import type { ERPNextItem } from "@/types/erpnext";
 interface ItemCardProps {
   item: ERPNextItem;
   stockQty?: number | null; // undefined = non-stock, null = loading, number = loaded
+  supplierName?: string;
 }
 
-export function ItemCard({ item, stockQty }: ItemCardProps) {
+export function ItemCard({ item, stockQty, supplierName }: ItemCardProps) {
   const addItem = useCartStore((s) => s.addItem);
 
   const isStockLoading = stockQty === null;
@@ -68,6 +69,11 @@ export function ItemCard({ item, stockQty }: ItemCardProps) {
         <div className="min-w-0 flex-1">
           <h3 className="text-sm font-medium leading-tight">{item.item_name}</h3>
           <p className="mt-0.5 text-xs text-muted-foreground">{item.item_group}</p>
+          {supplierName && (
+            <p className="mt-0.5 truncate text-xs text-purple-600 dark:text-purple-400">
+              {supplierName}
+            </p>
+          )}
         </div>
       </div>
       <div className="flex items-center justify-between">

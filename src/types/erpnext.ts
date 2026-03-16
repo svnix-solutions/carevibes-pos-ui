@@ -7,6 +7,7 @@ export interface ERPNextItem {
   stock_uom: string;
   standard_rate?: number;
   is_stock_item?: 0 | 1;
+  custom_supplier?: string;
 }
 
 export interface ERPNextItemGroup {
