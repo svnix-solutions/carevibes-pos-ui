@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/lib/cart/store";
 import { useCreateOrder } from "@/hooks/use-create-order";
+import { useTaxTemplate } from "@/hooks/use-tax-template";
 import { calculateTotals, formatCurrency, calculateChange } from "@/lib/cart/calculations";
 import { PaymentNumpad } from "./payment-numpad";
 import { Receipt } from "./receipt";
@@ -33,7 +34,8 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   const discount = useCartStore((s) => s.discount);
   const clearCart = useCartStore((s) => s.clearCart);
 
-  const totals = calculateTotals(items, discount);
+  const { data: taxInfo } = useTaxTemplate();
+  const totals = calculateTotals(items, discount, taxInfo?.totalRate ?? 0);
   const createOrder = useCreateOrder();
 
   const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([]);
@@ -85,6 +87,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
         payments: paymentLines,
         doctor: selectedDoctor?.name,
         lab: selectedLab?.name,
+        taxTemplate: taxInfo?.templateName,
       });
       setOrderResult(result);
       setShowReceipt(true);

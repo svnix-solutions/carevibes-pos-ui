@@ -19,6 +19,7 @@ export interface PaymentLine {
 export interface CartTotals {
   subtotal: number;
   taxAmount: number;
+  taxRate: number;
   discountAmount: number;
   grandTotal: number;
   itemCount: number;

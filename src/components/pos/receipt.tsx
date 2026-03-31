@@ -93,7 +93,9 @@ export function Receipt({
         )}
         {totals.taxAmount > 0 && (
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Tax</span>
+            <span className="text-muted-foreground">
+              Tax ({totals.taxRate}%)
+            </span>
             <span>{formatCurrency(totals.taxAmount)}</span>
           </div>
         )}

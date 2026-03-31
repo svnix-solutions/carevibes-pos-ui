@@ -2,7 +2,8 @@ import type { CartItem, CartTotals } from "./types";
 
 export function calculateTotals(
   items: CartItem[],
-  discountPercent: number = 0
+  discountPercent: number = 0,
+  taxRate: number = 0
 ): CartTotals {
   const subtotal = items.reduce(
     (sum, item) => sum + item.rate * item.quantity,
@@ -10,13 +11,13 @@ export function calculateTotals(
   );
   const discountAmount = subtotal * (discountPercent / 100);
   const taxableAmount = subtotal - discountAmount;
-  // GST placeholder - in production, get from POS Profile tax template
-  const taxAmount = 0;
+  const taxAmount = taxableAmount * (taxRate / 100);
   const grandTotal = taxableAmount + taxAmount;
 
   return {
     subtotal,
     taxAmount,
+    taxRate,
     discountAmount,
     grandTotal,
     itemCount: items.reduce((sum, item) => sum + item.quantity, 0),

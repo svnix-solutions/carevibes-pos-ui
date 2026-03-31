@@ -11,6 +11,7 @@ interface CreateOrderInput {
   payments: PaymentLine[];
   doctor?: string; // Supplier name for custom_doctor field on Sales Order
   lab?: string; // Supplier name for custom_lab field on Sales Order
+  taxTemplate?: string; // Sales Taxes and Charges Template name
 }
 
 interface CreateOrderResult {
@@ -22,7 +23,7 @@ export function useCreateOrder() {
   const queryClient = useQueryClient();
 
   return useMutation<CreateOrderResult, Error, CreateOrderInput>({
-    mutationFn: async ({ patient, items, payments, doctor, lab }) => {
+    mutationFn: async ({ patient, items, payments, doctor, lab, taxTemplate }) => {
       const today = new Date().toISOString().split("T")[0];
 
       // Step 1: Create Sales Order
@@ -36,6 +37,7 @@ export function useCreateOrder() {
           order_type: "Sales",
           ...(doctor && { custom_doctor: doctor }),
           ...(lab && { custom_lab: lab }),
+          ...(taxTemplate && { taxes_and_charges: taxTemplate }),
           items: items.map((item) => ({
             item_code: item.item_code,
             item_name: item.item_name,
@@ -57,6 +59,7 @@ export function useCreateOrder() {
           company: "Care Vibes",
           posting_date: today,
           is_pos: 1,
+          ...(taxTemplate && { taxes_and_charges: taxTemplate }),
           items: items.map((item) => ({
             item_code: item.item_code,
             item_name: item.item_name,
