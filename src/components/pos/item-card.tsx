@@ -12,9 +12,10 @@ interface ItemCardProps {
   item: ERPNextItem;
   stockQty?: number | null; // undefined = non-stock, null = loading, number = loaded
   supplierName?: string;
+  taxRate?: number;
 }
 
-export function ItemCard({ item, stockQty, supplierName }: ItemCardProps) {
+export function ItemCard({ item, stockQty, supplierName, taxRate }: ItemCardProps) {
   const addItem = useCartStore((s) => s.addItem);
 
   const isStockLoading = stockQty === null;
@@ -33,6 +34,7 @@ export function ItemCard({ item, stockQty, supplierName }: ItemCardProps) {
       uom: item.stock_uom,
       image: item.image,
       item_group: item.item_group,
+      taxRate,
     });
     toast.success(`Added ${item.item_name}`);
   }

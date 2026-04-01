@@ -6,6 +6,7 @@ export interface CartItem {
   uom: string;
   image?: string;
   item_group?: string;
+  taxRate?: number; // per-item GST rate from Item Tax Template
 }
 
 export type PaymentMethod = "Cash" | "UPI" | "Card";
@@ -19,7 +20,6 @@ export interface PaymentLine {
 export interface CartTotals {
   subtotal: number;
   taxAmount: number;
-  taxRate: number;
   discountAmount: number;
   grandTotal: number;
   itemCount: number;

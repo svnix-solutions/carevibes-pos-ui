@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCartStore } from "@/lib/cart/store";
 import { calculateTotals, formatCurrency } from "@/lib/cart/calculations";
-import { useTaxTemplate } from "@/hooks/use-tax-template";
+import { useItemTaxRates } from "@/hooks/use-tax-template";
 import { CartItem } from "./cart-item";
 import { CartSummary } from "./cart-summary";
 import { PatientSearch } from "./patient-search";
@@ -20,9 +20,14 @@ export function Cart({ onCheckout }: CartProps) {
   const patient = useCartStore((s) => s.patient);
   const discount = useCartStore((s) => s.discount);
   const clearCart = useCartStore((s) => s.clearCart);
-  const { data: taxInfo } = useTaxTemplate();
+  const { data: taxRates } = useItemTaxRates(items.map((i) => i.item_code));
 
-  const totals = calculateTotals(items, discount, taxInfo?.totalRate ?? 0);
+  // Merge tax rates into items for per-item calculation
+  const itemsWithTax = items.map((item) => ({
+    ...item,
+    taxRate: item.taxRate ?? taxRates?.[item.item_code] ?? 0,
+  }));
+  const totals = calculateTotals(itemsWithTax, discount);
   const canCheckout = items.length > 0 && patient !== null;
 
   return (

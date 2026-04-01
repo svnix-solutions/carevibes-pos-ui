@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { useItems } from "@/hooks/use-items";
 import { useStockLevels } from "@/hooks/use-stock-levels";
 import { useLabs } from "@/hooks/use-labs";
+import { useItemTaxRates } from "@/hooks/use-tax-template";
 import { useCartStore } from "@/lib/cart/store";
 import { ItemGroupSidebar } from "./item-group-tabs";
 import { ItemCard } from "./item-card";
@@ -69,6 +70,13 @@ export const ItemCatalog = forwardRef<HTMLInputElement>(
 
     // True when stock items exist but data hasn't arrived yet
     const stockPending = stockItemCodes.length > 0 && !stockMap;
+
+    // Fetch per-item tax rates
+    const allItemCodes = useMemo(
+      () => (items ?? []).map((item) => item.name),
+      [items]
+    );
+    const { data: taxRates } = useItemTaxRates(allItemCodes);
 
     // Map supplier ID → display name from labs data
     const labNameMap = useMemo(() => {
@@ -196,6 +204,7 @@ export const ItemCatalog = forwardRef<HTMLInputElement>(
                           ? labNameMap.get(item.custom_supplier)
                           : undefined
                       }
+                      taxRate={taxRates?.[item.name]}
                     />
                   ))}
                 </div>

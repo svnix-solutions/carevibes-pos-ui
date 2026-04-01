@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { erpnext } from "@/lib/erpnext/client";
 import type { CartItem, PaymentLine } from "@/lib/cart/types";
 import type { ERPNextPatient } from "@/types/erpnext";
+import type { TaxTemplateRow } from "@/hooks/use-tax-template";
 
 interface CreateOrderInput {
   patient: ERPNextPatient;
@@ -12,6 +13,7 @@ interface CreateOrderInput {
   doctor?: string; // Supplier name for custom_doctor field on Sales Order
   lab?: string; // Supplier name for custom_lab field on Sales Order
   taxTemplate?: string; // Sales Taxes and Charges Template name
+  taxRows?: TaxTemplateRow[]; // Tax rows from Sales Taxes template (required for API-created docs)
 }
 
 interface CreateOrderResult {
@@ -23,7 +25,7 @@ export function useCreateOrder() {
   const queryClient = useQueryClient();
 
   return useMutation<CreateOrderResult, Error, CreateOrderInput>({
-    mutationFn: async ({ patient, items, payments, doctor, lab, taxTemplate }) => {
+    mutationFn: async ({ patient, items, payments, doctor, lab, taxTemplate, taxRows }) => {
       const today = new Date().toISOString().split("T")[0];
 
       // Step 1: Create Sales Order
@@ -38,6 +40,14 @@ export function useCreateOrder() {
           ...(doctor && { custom_doctor: doctor }),
           ...(lab && { custom_lab: lab }),
           ...(taxTemplate && { taxes_and_charges: taxTemplate }),
+          ...(taxRows?.length && {
+            taxes: taxRows.map((row) => ({
+              charge_type: row.charge_type,
+              account_head: row.account_head,
+              rate: row.rate,
+              description: row.description,
+            })),
+          }),
           items: items.map((item) => ({
             item_code: item.item_code,
             item_name: item.item_name,
@@ -60,6 +70,14 @@ export function useCreateOrder() {
           posting_date: today,
           is_pos: 1,
           ...(taxTemplate && { taxes_and_charges: taxTemplate }),
+          ...(taxRows?.length && {
+            taxes: taxRows.map((row) => ({
+              charge_type: row.charge_type,
+              account_head: row.account_head,
+              rate: row.rate,
+              description: row.description,
+            })),
+          }),
           items: items.map((item) => ({
             item_code: item.item_code,
             item_name: item.item_name,

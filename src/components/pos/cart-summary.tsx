@@ -27,9 +27,7 @@ export function CartSummary({ totals }: CartSummaryProps) {
       )}
       {totals.taxAmount > 0 && (
         <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">
-            Tax ({totals.taxRate}%)
-          </span>
+          <span className="text-muted-foreground">GST</span>
           <span>{formatCurrency(totals.taxAmount)}</span>
         </div>
       )}

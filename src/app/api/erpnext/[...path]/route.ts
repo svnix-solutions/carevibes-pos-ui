@@ -14,7 +14,9 @@ async function proxyRequest(
   }
 
   const { path } = await params;
-  const erpnextPath = path.join("/");
+  // Re-encode each path segment — Next.js auto-decodes [...path] params,
+  // so special chars like % in "18% - CV" need to be re-encoded for ERPNext.
+  const erpnextPath = path.map((seg) => encodeURIComponent(seg)).join("/");
   const url = new URL(`/${erpnextPath}`, ERPNEXT_URL);
 
   // Forward query parameters
