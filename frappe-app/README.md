@@ -49,3 +49,4 @@ If you prefer a custom app (for version control, testing, etc.), see [carevibes_
 bench get-app /path/to/frappe-app
 bench --site your-site install-app carevibes_pos
 ```
+
