@@ -31,7 +31,6 @@ export function POSHeader() {
           width={300}
           height={130}
           priority
-          className="h-10 w-auto"
         />
       </Link>
 
