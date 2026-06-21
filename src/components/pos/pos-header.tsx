@@ -28,8 +28,6 @@ export function POSHeader() {
         <Image
           src="/ikleralogo.png"
           alt="Iklera Healthcare"
-          width={300}
-          height={130}
           priority
         />
       </Link>
