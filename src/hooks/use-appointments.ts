@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { erpnext } from "@/lib/erpnext/client";
+import { erpnext, ERPNEXT_COMPANY } from "@/lib/erpnext/client";
 import type { ERPNextAppointment } from "@/types/erpnext";
 
 export function useAppointments(date?: string) {
@@ -29,7 +29,7 @@ export function useAppointments(date?: string) {
         ],
         filters: [
           ["appointment_date", "=", today],
-          ["company", "=", "Care Vibes"],
+          ["company", "=", ERPNEXT_COMPANY],
         ],
         orderBy: "appointment_time asc",
         limit: 200,

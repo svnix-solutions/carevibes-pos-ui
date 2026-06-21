@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { erpnext } from "@/lib/erpnext/client";
+import { erpnext, ERPNEXT_COMPANY } from "@/lib/erpnext/client";
 
 interface ItemTaxTemplate {
   name: string;
@@ -30,7 +30,7 @@ export function useTaxConfig() {
         "Sales Taxes and Charges Template",
         {
           fields: ["name"],
-          filters: [["company", "=", "Care Vibes"]],
+          filters: [["company", "=", ERPNEXT_COMPANY]],
           limit: 1,
         }
       );
@@ -62,7 +62,7 @@ export function useTaxConfig() {
         "Item Tax Template",
         {
           fields: ["name"],
-          filters: [["company", "=", "Care Vibes"], ["disabled", "=", 0]],
+          filters: [["company", "=", ERPNEXT_COMPANY], ["disabled", "=", 0]],
           limit: 50,
         }
       );

@@ -191,3 +191,10 @@ class ERPNextClient {
 }
 
 export const erpnext = new ERPNextClient();
+
+/**
+ * The ERPNext Company used for all selling documents (Sales Order, Sales
+ * Invoice, Patient Appointment, etc.). Set NEXT_PUBLIC_ERPNEXT_COMPANY in
+ * the deployment environment — the API will reject documents without it.
+ */
+export const ERPNEXT_COMPANY = process.env.NEXT_PUBLIC_ERPNEXT_COMPANY ?? "";

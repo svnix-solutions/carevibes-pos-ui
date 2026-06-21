@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { erpnext } from "@/lib/erpnext/client";
+import { erpnext, ERPNEXT_COMPANY } from "@/lib/erpnext/client";
 import type { CartItem, PaymentLine } from "@/lib/cart/types";
 import type { ERPNextPatient } from "@/types/erpnext";
 import type { TaxTemplateRow } from "@/hooks/use-tax-template";
@@ -33,7 +33,7 @@ export function useCreateOrder() {
         "Sales Order",
         {
           customer: patient.customer,
-          company: "Care Vibes",
+          company: ERPNEXT_COMPANY,
           transaction_date: today,
           delivery_date: today,
           order_type: "Sales",
@@ -66,7 +66,7 @@ export function useCreateOrder() {
         "Sales Invoice",
         {
           customer: patient.customer,
-          company: "Care Vibes",
+          company: ERPNEXT_COMPANY,
           posting_date: today,
           is_pos: 1,
           ...(taxTemplate && { taxes_and_charges: taxTemplate }),

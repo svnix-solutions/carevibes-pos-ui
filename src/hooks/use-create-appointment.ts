@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { erpnext } from "@/lib/erpnext/client";
+import { erpnext, ERPNEXT_COMPANY } from "@/lib/erpnext/client";
 import type { ERPNextAppointment } from "@/types/erpnext";
 
 interface CreateAppointmentInput {
@@ -24,7 +24,7 @@ export function useCreateAppointment() {
       erpnext.createDoc<ERPNextAppointment>("Patient Appointment", {
         ...input,
         duration: input.duration ?? 15,
-        company: "Care Vibes",
+        company: ERPNEXT_COMPANY,
       }),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({
