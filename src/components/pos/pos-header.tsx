@@ -1,7 +1,6 @@
 "use client";
 
 import { LogOut, Receipt, Calendar, ClipboardList } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -25,11 +24,8 @@ export function POSHeader() {
   return (
     <header className="flex h-14 items-center justify-between border-b bg-background px-4">
       <Link href="/billing" aria-label="Iklera Healthcare">
-        <Image
-          src="/ikleralogo.png"
-          alt="Iklera Healthcare"
-          priority
-        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/ikleralogo.png" alt="Iklera Healthcare" />
       </Link>
 
       <nav className="flex items-center gap-1">
