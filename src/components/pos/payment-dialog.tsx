@@ -15,8 +15,15 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/lib/cart/store";
 import { useCreateOrder } from "@/hooks/use-create-order";
+import type { CreateOrderResult } from "@/hooks/use-create-order";
 import { useTaxConfig, useItemTaxRates } from "@/hooks/use-tax-template";
-import { calculateTotals, formatCurrency, calculateChange } from "@/lib/cart/calculations";
+import {
+  calculateTotals,
+  formatCurrency,
+  calculateChange,
+  remainingDue,
+  isSettled,
+} from "@/lib/cart/calculations";
 import { PaymentNumpad } from "./payment-numpad";
 import { Receipt } from "./receipt";
 import type { PaymentLine, PaymentMethod } from "@/lib/cart/types";
@@ -31,7 +38,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   const patient = useCartStore((s) => s.patient);
   const selectedDoctor = useCartStore((s) => s.selectedDoctor);
   const selectedLab = useCartStore((s) => s.selectedLab);
-  const discount = useCartStore((s) => s.discount);
+  const cartDiscount = useCartStore((s) => s.cartDiscount);
   const clearCart = useCartStore((s) => s.clearCart);
 
   const { data: taxConfig } = useTaxConfig();
@@ -40,7 +47,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
     ...item,
     taxRate: item.taxRate ?? taxRates?.[item.item_code] ?? 0,
   }));
-  const totals = calculateTotals(itemsWithTax, discount);
+  const totals = calculateTotals(itemsWithTax, cartDiscount ?? undefined);
   const createOrder = useCreateOrder();
 
   const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([]);
@@ -48,19 +55,21 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   const [amountInput, setAmountInput] = useState("");
   const [reference, setReference] = useState("");
   const [showReceipt, setShowReceipt] = useState(false);
-  const [orderResult, setOrderResult] = useState<{
-    salesOrder: { name: string };
-    salesInvoice: { name: string };
-  } | null>(null);
+  const [orderResult, setOrderResult] = useState<CreateOrderResult | null>(null);
 
   const totalPaid = paymentLines.reduce((sum, l) => sum + l.amount, 0);
-  const remaining = totals.grandTotal - totalPaid;
+  // Settlement is judged at paisa precision — discounted bills otherwise leave
+  // float residue that would block checkout on an exactly-tendered amount.
+  const remaining = remainingDue(totalPaid, totals.grandTotal);
   const cashTendered = paymentLines
     .filter((l) => l.method === "Cash")
     .reduce((sum, l) => sum + l.amount, 0);
-  const change = calculateChange(cashTendered, totals.grandTotal - paymentLines.filter(l => l.method !== "Cash").reduce((s, l) => s + l.amount, 0));
+  const nonCashPaid = paymentLines
+    .filter((l) => l.method !== "Cash")
+    .reduce((sum, l) => sum + l.amount, 0);
+  const change = calculateChange(cashTendered, totals.grandTotal - nonCashPaid);
 
-  const isFullyPaid = remaining <= 0 && totalPaid > 0;
+  const isFullyPaid = isSettled(totalPaid, totals.grandTotal) && totalPaid > 0;
 
   function addPaymentLine() {
     const amount = parseFloat(amountInput);
@@ -90,6 +99,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
         patient,
         items,
         payments: paymentLines,
+        cartDiscount,
         doctor: selectedDoctor?.name,
         lab: selectedLab?.name,
         taxTemplate: taxConfig?.templateName,
@@ -139,12 +149,30 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
             <p className="text-lg font-semibold">
-              {formatCurrency(totals.grandTotal)}
+              {formatCurrency(
+                orderResult.erpnextTotals?.grand_total ?? totals.grandTotal
+              )}
             </p>
             <p className="text-sm text-muted-foreground">
               Invoice: {orderResult.salesInvoice.name}
             </p>
           </div>
+
+          {/* The POS and ERPNext each compute totals. With is_pos the payment
+              was already taken against ours, so a divergence leaves a real
+              balance on the invoice and a supervisor needs to know now. */}
+          {orderResult.totalMismatch && (
+            <div className="rounded-lg border border-orange-300 bg-orange-50 p-3 text-sm dark:border-orange-900 dark:bg-orange-950/40">
+              <p className="font-medium text-orange-700 dark:text-orange-400">
+                Total mismatch &mdash; check this invoice
+              </p>
+              <p className="mt-1 text-orange-700/90 dark:text-orange-400/90">
+                Collected {formatCurrency(orderResult.totalMismatch.expected)},
+                but ERPNext booked{" "}
+                {formatCurrency(orderResult.totalMismatch.actual)}.
+              </p>
+            </div>
+          )}
           <Receipt
             invoiceName={orderResult.salesInvoice.name}
             patient={patient!}

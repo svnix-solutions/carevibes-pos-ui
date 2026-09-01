@@ -18,7 +18,7 @@ interface CartProps {
 export function Cart({ onCheckout }: CartProps) {
   const items = useCartStore((s) => s.items);
   const patient = useCartStore((s) => s.patient);
-  const discount = useCartStore((s) => s.discount);
+  const cartDiscount = useCartStore((s) => s.cartDiscount);
   const clearCart = useCartStore((s) => s.clearCart);
   const { data: taxRates } = useItemTaxRates(items.map((i) => i.item_code));
 
@@ -27,7 +27,7 @@ export function Cart({ onCheckout }: CartProps) {
     ...item,
     taxRate: item.taxRate ?? taxRates?.[item.item_code] ?? 0,
   }));
-  const totals = calculateTotals(itemsWithTax, discount);
+  const totals = calculateTotals(itemsWithTax, cartDiscount ?? undefined);
   const canCheckout = items.length > 0 && patient !== null;
 
   return (

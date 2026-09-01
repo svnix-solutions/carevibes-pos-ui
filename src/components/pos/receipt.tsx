@@ -64,16 +64,36 @@ export function Receipt({
           </tr>
         </thead>
         <tbody>
-          {items.map((item) => (
-            <tr key={item.item_code} className="border-b border-dashed">
-              <td className="py-1 pr-2">{item.item_name}</td>
-              <td className="py-1 text-center">{item.quantity}</td>
-              <td className="py-1 text-right">{formatCurrency(item.rate)}</td>
-              <td className="py-1 text-right">
-                {formatCurrency(item.rate * item.quantity)}
-              </td>
-            </tr>
-          ))}
+          {items.map((item, i) => {
+            const line = totals.lines[i];
+            const discounted = line && line.discountAmount > 0;
+            return (
+              <tr key={item.item_code} className="border-b border-dashed">
+                <td className="py-1 pr-2">
+                  {item.item_name}
+                  {discounted && (
+                    <span className="block text-[10px] text-muted-foreground">
+                      {item.discountType === "percent"
+                        ? `${item.discountValue}% off`
+                        : `${formatCurrency(line.discountAmount)} off`}
+                    </span>
+                  )}
+                </td>
+                <td className="py-1 text-center align-top">{item.quantity}</td>
+                <td className="py-1 text-right align-top">
+                  {discounted && (
+                    <span className="mr-1 text-[10px] text-muted-foreground line-through">
+                      {formatCurrency(item.rate)}
+                    </span>
+                  )}
+                  {formatCurrency(line ? line.netRate : item.rate)}
+                </td>
+                <td className="py-1 text-right align-top">
+                  {formatCurrency(line ? line.net : item.rate * item.quantity)}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 
@@ -85,10 +105,16 @@ export function Receipt({
           <span className="text-muted-foreground">Subtotal</span>
           <span>{formatCurrency(totals.subtotal)}</span>
         </div>
-        {totals.discountAmount > 0 && (
+        {totals.lineDiscountAmount > 0 && (
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Discount</span>
-            <span>-{formatCurrency(totals.discountAmount)}</span>
+            <span className="text-muted-foreground">Item discounts</span>
+            <span>-{formatCurrency(totals.lineDiscountAmount)}</span>
+          </div>
+        )}
+        {totals.cartDiscountAmount > 0 && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">Bill discount</span>
+            <span>-{formatCurrency(totals.cartDiscountAmount)}</span>
           </div>
         )}
         {totals.taxAmount > 0 && (
