@@ -2,6 +2,24 @@
  *  ERPNext stores percent-of-base, so "amount" is normalised at calc time. */
 export type DiscountType = "percent" | "amount";
 
+/** A coupon resolved against ERPNext and held on the cart.
+ *
+ *  `name` is the Coupon Code *document* name, which is what ERPNext's pricing
+ *  engine and the `coupon_code` link field expect — not the code string the
+ *  cashier types. The two differ (doc "Nitin 10" carries code "NITIN10"), and
+ *  passing the code string silently yields no discount at all.
+ */
+export interface AppliedCoupon {
+  /** Coupon Code document name — what ERPNext wants. */
+  name: string;
+  /** The code as typed/stored, for display. */
+  code: string;
+  pricingRule?: string;
+}
+
+/** Per-item discount percentages granted by a coupon, keyed by item_code. */
+export type CouponDiscounts = Record<string, number>;
+
 /** A cart-level (whole-bill) discount, applied after per-line discounts. */
 export interface CartDiscount {
   type: DiscountType;
@@ -44,6 +62,8 @@ export interface CartLineTotals {
   netRate: number;
   /** Line discount normalised to a percent, for ERPNext discount_percentage. */
   discountPercent: number;
+  /** Which source won this line. Coupon and manual do not stack. */
+  discountSource: "manual" | "coupon" | null;
   /** net, less this line's proportional share of the cart-level discount. */
   taxable: number;
   taxRate: number;
@@ -53,8 +73,10 @@ export interface CartLineTotals {
 export interface CartTotals {
   /** Gross of all lines, before any discount. */
   subtotal: number;
-  /** Sum of the per-line discounts. */
+  /** Sum of per-line discounts the cashier gave. Counts against the cap. */
   lineDiscountAmount: number;
+  /** Sum of per-line discounts a coupon gave. Exempt from the cashier cap. */
+  couponDiscountAmount: number;
   /** subtotal - lineDiscountAmount. ERPNext's net_total. */
   netTotal: number;
   /** Whole-bill discount, applied to netTotal. */

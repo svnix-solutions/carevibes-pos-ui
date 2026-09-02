@@ -4,9 +4,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { erpnext, ERPNEXT_COMPANY } from "@/lib/erpnext/client";
 import { calculateTotals, round2 } from "@/lib/cart/calculations";
 import type {
+  AppliedCoupon,
   CartDiscount,
   CartItem,
   CartLineTotals,
+  CouponDiscounts,
   PaymentLine,
 } from "@/lib/cart/types";
 import type { ERPNextPatient } from "@/types/erpnext";
@@ -17,6 +19,8 @@ interface CreateOrderInput {
   items: CartItem[];
   payments: PaymentLine[];
   cartDiscount?: CartDiscount | null;
+  coupon?: AppliedCoupon | null;
+  couponDiscounts?: CouponDiscounts;
   doctor?: string; // Supplier name for custom_doctor field on Sales Order
   lab?: string; // Supplier name for custom_lab field on Sales Order
   taxTemplate?: string; // Sales Taxes and Charges Template name
@@ -101,13 +105,28 @@ export function useCreateOrder() {
       items,
       payments,
       cartDiscount,
+      coupon,
+      couponDiscounts,
       doctor,
       lab,
       taxTemplate,
       taxRows,
     }) => {
       const today = new Date().toISOString().split("T")[0];
-      const totals = calculateTotals(items, cartDiscount ?? undefined);
+      const totals = calculateTotals(
+        items,
+        cartDiscount ?? undefined,
+        couponDiscounts
+      );
+
+      // The coupon's discount is already baked into each line's
+      // discount_percentage above, so ERPNext must not apply the underlying
+      // Pricing Rule a second time on top of an already-discounted rate.
+      // Scoped to coupon sales so ordinary ones keep whatever automatic
+      // pricing rules the ERP may gain later.
+      const couponFields = coupon
+        ? { ignore_pricing_rule: 1 as const }
+        : {};
       const discountFields = toDocDiscount(cartDiscount, totals.cartDiscountAmount);
 
       const taxFields = {
@@ -135,6 +154,7 @@ export function useCreateOrder() {
           ...(lab && { custom_lab: lab }),
           ...taxFields,
           ...discountFields,
+          ...couponFields,
           items: toDocItems(items, totals.lines),
         }
       );
@@ -152,6 +172,12 @@ export function useCreateOrder() {
           is_pos: 1,
           ...taxFields,
           ...discountFields,
+          ...couponFields,
+          // Recorded on the invoice only, never on the Sales Order. ERPNext
+          // increments a coupon's `used` counter when a document carrying it
+          // is submitted, and this flow submits both — so putting the code on
+          // both would spend two of the coupon's uses for a single sale.
+          ...(coupon && { coupon_code: coupon.name }),
           items: toDocItems(items, totals.lines, salesOrder.name),
           payments: payments.map((p) => ({
             mode_of_payment: p.method,

@@ -15,15 +15,17 @@ import { DiscountInput } from "./discount-input";
 
 interface CartItemProps {
   item: CartItemType;
+  /** Discount percent a coupon grants this line, if any. */
+  couponPercent?: number;
 }
 
-export function CartItem({ item }: CartItemProps) {
+export function CartItem({ item, couponPercent = 0 }: CartItemProps) {
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const removeItem = useCartStore((s) => s.removeItem);
   const setItemDiscount = useCartStore((s) => s.setItemDiscount);
   const clearItemDiscount = useCartStore((s) => s.clearItemDiscount);
 
-  const line = calculateLine(item);
+  const line = calculateLine(item, couponPercent);
   const discounted = line.discountAmount > 0;
 
   function handleRemove() {
@@ -82,6 +84,11 @@ export function CartItem({ item }: CartItemProps) {
             />
           </div>
           <div className="text-right">
+            {line.discountSource === "coupon" && (
+              <p className="text-[10px] font-medium text-green-600">
+                coupon &minus;{round2(line.discountPercent)}%
+              </p>
+            )}
             {discounted ? (
               <p className="text-sm font-medium">
                 <span className="mr-1 text-xs font-normal text-muted-foreground line-through">

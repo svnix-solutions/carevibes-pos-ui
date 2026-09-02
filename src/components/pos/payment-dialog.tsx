@@ -17,6 +17,7 @@ import { useCartStore } from "@/lib/cart/store";
 import { useCreateOrder } from "@/hooks/use-create-order";
 import type { CreateOrderResult } from "@/hooks/use-create-order";
 import { useTaxConfig, useItemTaxRates } from "@/hooks/use-tax-template";
+import { useCouponDiscounts } from "@/hooks/use-coupon";
 import {
   calculateTotals,
   formatCurrency,
@@ -39,6 +40,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   const selectedDoctor = useCartStore((s) => s.selectedDoctor);
   const selectedLab = useCartStore((s) => s.selectedLab);
   const cartDiscount = useCartStore((s) => s.cartDiscount);
+  const appliedCoupon = useCartStore((s) => s.appliedCoupon);
   const clearCart = useCartStore((s) => s.clearCart);
 
   const { data: taxConfig } = useTaxConfig();
@@ -47,7 +49,16 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
     ...item,
     taxRate: item.taxRate ?? taxRates?.[item.item_code] ?? 0,
   }));
-  const totals = calculateTotals(itemsWithTax, cartDiscount ?? undefined);
+  const { data: couponDiscounts } = useCouponDiscounts(
+    appliedCoupon,
+    items,
+    patient?.customer
+  );
+  const totals = calculateTotals(
+    itemsWithTax,
+    cartDiscount ?? undefined,
+    couponDiscounts
+  );
   const createOrder = useCreateOrder();
 
   const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([]);
@@ -100,6 +111,8 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
         items,
         payments: paymentLines,
         cartDiscount,
+        couponDiscounts,
+        coupon: appliedCoupon,
         doctor: selectedDoctor?.name,
         lab: selectedLab?.name,
         taxTemplate: taxConfig?.templateName,
@@ -180,6 +193,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
             totals={totals}
             payments={paymentLines}
             change={change}
+            couponCode={appliedCoupon?.code}
           />
           <div className="flex gap-2">
             <Button variant="outline" className="flex-1" onClick={() => window.print()}>

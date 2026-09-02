@@ -1,7 +1,7 @@
 "use client";
 
 import { Separator } from "@/components/ui/separator";
-import { formatCurrency } from "@/lib/cart/calculations";
+import { formatCurrency, round2 } from "@/lib/cart/calculations";
 import type { CartItem, CartTotals, PaymentLine } from "@/lib/cart/types";
 import type { ERPNextPatient } from "@/types/erpnext";
 
@@ -12,6 +12,7 @@ interface ReceiptProps {
   totals: CartTotals;
   payments: PaymentLine[];
   change: number;
+  couponCode?: string;
 }
 
 export function Receipt({
@@ -21,6 +22,7 @@ export function Receipt({
   totals,
   payments,
   change,
+  couponCode,
 }: ReceiptProps) {
   const now = new Date();
 
@@ -73,9 +75,11 @@ export function Receipt({
                   {item.item_name}
                   {discounted && (
                     <span className="block text-[10px] text-muted-foreground">
-                      {item.discountType === "percent"
-                        ? `${item.discountValue}% off`
-                        : `${formatCurrency(line.discountAmount)} off`}
+                      {line.discountSource === "coupon"
+                        ? `${couponCode ?? "Coupon"} ${round2(line.discountPercent)}% off`
+                        : item.discountType === "percent"
+                          ? `${item.discountValue}% off`
+                          : `${formatCurrency(line.discountAmount)} off`}
                     </span>
                   )}
                 </td>
@@ -109,6 +113,14 @@ export function Receipt({
           <div className="flex justify-between">
             <span className="text-muted-foreground">Item discounts</span>
             <span>-{formatCurrency(totals.lineDiscountAmount)}</span>
+          </div>
+        )}
+        {totals.couponDiscountAmount > 0 && (
+          <div className="flex justify-between">
+            <span className="text-muted-foreground">
+              Coupon{couponCode ? ` (${couponCode})` : ""}
+            </span>
+            <span>-{formatCurrency(totals.couponDiscountAmount)}</span>
           </div>
         )}
         {totals.cartDiscountAmount > 0 && (

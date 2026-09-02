@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { MAX_DISCOUNT_PERCENT } from "./calculations";
 import type {
+  AppliedCoupon,
   CartDiscount,
   CartItem,
   DiscountType,
@@ -24,6 +25,7 @@ interface CartState {
   items: CartItem[];
   payments: PaymentLine[];
   cartDiscount: CartDiscount | null;
+  appliedCoupon: AppliedCoupon | null;
   selectedLab: ERPNextSupplier | null;
   selectedDoctor: ERPNextSupplier | null;
 
@@ -42,6 +44,7 @@ interface CartState {
   clearItemDiscount: (itemCode: string) => void;
   setCartDiscount: (discountType: DiscountType, discountValue: number) => void;
   clearCartDiscount: () => void;
+  setCoupon: (coupon: AppliedCoupon | null) => void;
   setLab: (lab: ERPNextSupplier | null) => void;
   setDoctor: (doctor: ERPNextSupplier | null) => void;
   clearCart: () => void;
@@ -54,10 +57,20 @@ export const useCartStore = create<CartState>()(
       items: [],
       payments: [],
       cartDiscount: null,
+      appliedCoupon: null,
       selectedLab: null,
       selectedDoctor: null,
 
-      setPatient: (patient) => set({ patient }),
+      // A coupon is priced against a specific patient, so changing the patient
+      // invalidates it rather than silently carrying it to the next person.
+      setPatient: (patient) =>
+        set((state) => ({
+          patient,
+          appliedCoupon:
+            state.patient?.customer === patient?.customer
+              ? state.appliedCoupon
+              : null,
+        })),
 
       addItem: (item) =>
         set((state) => {
@@ -150,6 +163,8 @@ export const useCartStore = create<CartState>()(
 
       clearCartDiscount: () => set({ cartDiscount: null }),
 
+      setCoupon: (coupon) => set({ appliedCoupon: coupon }),
+
       setLab: (lab) => set({ selectedLab: lab }),
 
       setDoctor: (doctor) => set({ selectedDoctor: doctor }),
@@ -160,6 +175,7 @@ export const useCartStore = create<CartState>()(
           items: [],
           payments: [],
           cartDiscount: null,
+          appliedCoupon: null,
           selectedLab: null,
           selectedDoctor: null,
         }),
@@ -173,6 +189,7 @@ export const useCartStore = create<CartState>()(
         patient: state.patient,
         items: state.items,
         cartDiscount: state.cartDiscount,
+        appliedCoupon: state.appliedCoupon,
         selectedLab: state.selectedLab,
         selectedDoctor: state.selectedDoctor,
       }),

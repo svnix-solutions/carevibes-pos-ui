@@ -198,3 +198,11 @@ export const erpnext = new ERPNextClient();
  * the deployment environment — the API will reject documents without it.
  */
 export const ERPNEXT_COMPANY = process.env.NEXT_PUBLIC_ERPNEXT_COMPANY ?? "";
+
+/**
+ * Selling Price List used when asking ERPNext to price a cart (the pricing
+ * rule engine needs one to resolve a coupon). "Standard Selling" is the only
+ * enabled selling list on the instance today.
+ */
+export const ERPNEXT_SELLING_PRICE_LIST =
+  process.env.NEXT_PUBLIC_ERPNEXT_PRICE_LIST ?? "Standard Selling";

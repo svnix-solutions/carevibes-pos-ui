@@ -9,14 +9,21 @@ import {
 import { useCartStore } from "@/lib/cart/store";
 import type { CartTotals } from "@/lib/cart/types";
 import { DiscountInput } from "./discount-input";
+import { CouponInput } from "./coupon-input";
 
 interface CartSummaryProps {
   totals: CartTotals;
   /** Hide the bill-discount control where the cart is read-only (e.g. payment). */
   editable?: boolean;
+  /** Coupon is applied but grants nothing on the current cart. */
+  couponInactive?: boolean;
 }
 
-export function CartSummary({ totals, editable = true }: CartSummaryProps) {
+export function CartSummary({
+  totals,
+  editable = true,
+  couponInactive = false,
+}: CartSummaryProps) {
   const cartDiscount = useCartStore((s) => s.cartDiscount);
   const setCartDiscount = useCartStore((s) => s.setCartDiscount);
   const clearCartDiscount = useCartStore((s) => s.clearCartDiscount);
@@ -48,6 +55,15 @@ export function CartSummary({ totals, editable = true }: CartSummaryProps) {
           <span className="text-muted-foreground">Item discounts</span>
           <span className="text-green-600">
             -{formatCurrency(totals.lineDiscountAmount)}
+          </span>
+        </div>
+      )}
+
+      {totals.couponDiscountAmount > 0 && (
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">Coupon</span>
+          <span className="text-green-600">
+            -{formatCurrency(totals.couponDiscountAmount)}
           </span>
         </div>
       )}
@@ -84,6 +100,15 @@ export function CartSummary({ totals, editable = true }: CartSummaryProps) {
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">GST</span>
           <span>{formatCurrency(totals.taxAmount)}</span>
+        </div>
+      )}
+
+      {editable && (
+        <div className="pt-0.5">
+          <CouponInput
+            couponDiscountAmount={totals.couponDiscountAmount}
+            inactive={couponInactive}
+          />
         </div>
       )}
 

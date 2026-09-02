@@ -3,6 +3,7 @@ import type {
   CartItem,
   CartLineTotals,
   CartTotals,
+  CouponDiscounts,
 } from "./types";
 
 /**
@@ -33,24 +34,40 @@ export function round2(amount: number): number {
  * Order of operations deliberately mirrors ERPNext: the discount reduces the
  * unit rate, and the discounted rate is then extended by qty.
  */
-export function calculateLine(item: CartItem): CartLineTotals {
+export function calculateLine(
+  item: CartItem,
+  couponPercent = 0
+): CartLineTotals {
   const qty = item.quantity;
   const gross = round2(item.rate * qty);
 
-  let discountPercent = 0;
+  let manualPercent = 0;
   if (item.discountValue && item.discountValue > 0 && gross > 0) {
     if (item.discountType === "amount") {
       // Cashiers think in "₹200 off this line"; ERPNext works in
       // percent-of-price-list-rate. Normalise, capping at the line value so a
       // stale flat amount can never exceed the line after a qty change.
-      discountPercent = (Math.min(item.discountValue, gross) / gross) * 100;
+      manualPercent = (Math.min(item.discountValue, gross) / gross) * 100;
     } else {
-      discountPercent = item.discountValue;
+      manualPercent = item.discountValue;
     }
     // Re-capped here, not just at input, so a cart persisted from before the
     // limit — or one hand-edited in localStorage — can't exceed it either.
-    discountPercent = Math.min(discountPercent, MAX_DISCOUNT_PERCENT);
+    manualPercent = Math.min(manualPercent, MAX_DISCOUNT_PERCENT);
   }
+
+  // A coupon was approved by whoever created it in ERPNext, so it is not
+  // spending the cashier's discretionary allowance and is not capped by it.
+  // The two never stack on one line — the better of the two wins, which is
+  // also what stops a coupon and a manual discount compounding into a
+  // discount neither party intended.
+  const discountPercent = Math.max(manualPercent, couponPercent);
+  const discountSource: CartLineTotals["discountSource"] =
+    discountPercent <= 0
+      ? null
+      : couponPercent > manualPercent
+        ? "coupon"
+        : "manual";
 
   const netRate = round2(item.rate * (1 - discountPercent / 100));
   const net = round2(netRate * qty);
@@ -63,6 +80,7 @@ export function calculateLine(item: CartItem): CartLineTotals {
     net,
     netRate,
     discountPercent,
+    discountSource,
     // No cart discount applied yet — calculateTotals refines these below.
     taxable: net,
     taxRate,
@@ -84,13 +102,26 @@ export function calculateLine(item: CartItem): CartLineTotals {
  */
 export function calculateTotals(
   items: CartItem[],
-  cartDiscount?: CartDiscount
+  cartDiscount?: CartDiscount,
+  couponDiscounts?: CouponDiscounts
 ): CartTotals {
-  const base = items.map(calculateLine);
+  const base = items.map((item) =>
+    calculateLine(item, couponDiscounts?.[item.item_code] ?? 0)
+  );
 
   const subtotal = round2(base.reduce((sum, l) => sum + l.gross, 0));
+  // Split by source: only what the cashier gave counts against the cap.
   const lineDiscountAmount = round2(
-    base.reduce((sum, l) => sum + l.discountAmount, 0)
+    base.reduce(
+      (sum, l) => sum + (l.discountSource === "manual" ? l.discountAmount : 0),
+      0
+    )
+  );
+  const couponDiscountAmount = round2(
+    base.reduce(
+      (sum, l) => sum + (l.discountSource === "coupon" ? l.discountAmount : 0),
+      0
+    )
   );
   const netTotal = round2(base.reduce((sum, l) => sum + l.net, 0));
 
@@ -118,15 +149,22 @@ export function calculateTotals(
   const taxAmount = round2(lines.reduce((sum, l) => sum + l.taxAmount, 0));
   const grandTotal = round2(netTotal - cartDiscountAmount + taxAmount);
 
-  const discountAmount = round2(lineDiscountAmount + cartDiscountAmount);
+  const discountAmount = round2(
+    lineDiscountAmount + couponDiscountAmount + cartDiscountAmount
+  );
 
   return {
     subtotal,
     lineDiscountAmount,
+    couponDiscountAmount,
     netTotal,
     cartDiscountAmount,
     maxDiscount,
-    discountAllowance: Math.max(0, round2(maxDiscount - discountAmount)),
+    // Only discretionary discounts draw on the allowance — a coupon does not.
+    discountAllowance: Math.max(
+      0,
+      round2(maxDiscount - lineDiscountAmount - cartDiscountAmount)
+    ),
     discountAmount,
     taxAmount,
     grandTotal,
