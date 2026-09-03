@@ -57,7 +57,7 @@ export function CouponInput({
       return;
     }
     try {
-      const { coupon } = await applyCoupon.mutateAsync({
+      const { coupon, discounts } = await applyCoupon.mutateAsync({
         code: applyCode,
         items,
         customer: patient.customer,
@@ -67,13 +67,23 @@ export function CouponInput({
       setCode("");
       toast.success(`${coupon.code} applied`);
 
-      // A bill carries one or the other, so say so rather than letting the
-      // cashier notice the totals moved and wonder what happened to the
-      // discount they entered. Nothing is discarded — it returns on removal.
-      const hadManual =
-        items.some((i) => (i.discountValue ?? 0) > 0) || Boolean(cartDiscount);
-      if (hadManual) {
-        toast.info("Manual discounts are paused while a coupon is applied", {
+      // Only what the coupon actually displaces is worth mentioning: manual
+      // discounts on lines it covers, and the bill discount, which would
+      // otherwise compound onto those same lines. Discounts on items outside
+      // its scope keep working and are deliberately not mentioned. Nothing is
+      // discarded either way — it all returns when the coupon is removed.
+      const pausedLines = items.filter(
+        (i) => (i.discountValue ?? 0) > 0 && (discounts[i.item_code] ?? 0) > 0
+      ).length;
+      const parts: string[] = [];
+      if (pausedLines) {
+        parts.push(
+          `${pausedLines} item discount${pausedLines > 1 ? "s" : ""}`
+        );
+      }
+      if (cartDiscount) parts.push("the bill discount");
+      if (parts.length) {
+        toast.info(`Coupon replaces ${parts.join(" and ")}`, {
           duration: 4000,
         });
       }

@@ -17,21 +17,18 @@ interface CartItemProps {
   item: CartItemType;
   /** Discount percent a coupon grants this line, if any. */
   couponPercent?: number;
-  /** True while any coupon is on the cart — manual discounts are suppressed. */
-  couponApplied?: boolean;
 }
 
 export function CartItem({
   item,
   couponPercent = 0,
-  couponApplied = false,
 }: CartItemProps) {
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const removeItem = useCartStore((s) => s.removeItem);
   const setItemDiscount = useCartStore((s) => s.setItemDiscount);
   const clearItemDiscount = useCartStore((s) => s.clearItemDiscount);
 
-  const line = calculateLine(item, couponPercent, couponApplied);
+  const line = calculateLine(item, couponPercent);
   const discounted = line.discountAmount > 0;
 
   function handleRemove() {
@@ -78,10 +75,8 @@ export function CartItem({
               size="sm"
               label="Line discount"
               base={line.gross}
-              disabled={couponApplied}
-              disabledReason={
-                couponPercent > 0 ? "priced by coupon" : "coupon applied"
-              }
+              disabled={couponPercent > 0}
+              disabledReason="priced by coupon"
               maxPercent={MAX_DISCOUNT_PERCENT}
               maxAmount={round2((line.gross * MAX_DISCOUNT_PERCENT) / 100)}
               discountType={item.discountType}

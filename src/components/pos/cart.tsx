@@ -97,7 +97,6 @@ export function Cart({ onCheckout }: CartProps) {
                 key={item.item_code}
                 item={item}
                 couponPercent={couponDiscounts?.[item.item_code] ?? 0}
-                couponApplied={couponApplied}
               />
             ))}
           </div>
