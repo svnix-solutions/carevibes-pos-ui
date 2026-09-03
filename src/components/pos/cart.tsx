@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCartStore } from "@/lib/cart/store";
 import { calculateTotals, formatCurrency } from "@/lib/cart/calculations";
 import { useItemTaxRates } from "@/hooks/use-tax-template";
+import { useCouponDiscounts } from "@/hooks/use-coupon";
 import { CartItem } from "./cart-item";
 import { CartSummary } from "./cart-summary";
 import { PatientSearch } from "./patient-search";
@@ -18,8 +19,11 @@ interface CartProps {
 export function Cart({ onCheckout }: CartProps) {
   const items = useCartStore((s) => s.items);
   const patient = useCartStore((s) => s.patient);
-  const discount = useCartStore((s) => s.discount);
+  const cartDiscount = useCartStore((s) => s.cartDiscount);
+  const appliedCoupon = useCartStore((s) => s.appliedCoupon);
   const clearCart = useCartStore((s) => s.clearCart);
+  const { data: couponDiscounts, isFetching: couponFetching } =
+    useCouponDiscounts(appliedCoupon, items, patient?.customer);
   const { data: taxRates } = useItemTaxRates(items.map((i) => i.item_code));
 
   // Merge tax rates into items for per-item calculation
@@ -27,7 +31,19 @@ export function Cart({ onCheckout }: CartProps) {
     ...item,
     taxRate: item.taxRate ?? taxRates?.[item.item_code] ?? 0,
   }));
-  const totals = calculateTotals(itemsWithTax, discount);
+  const couponApplied = Boolean(appliedCoupon);
+  const totals = calculateTotals(itemsWithTax, {
+    cartDiscount,
+    couponDiscounts,
+    couponApplied,
+  });
+  // Applied, resolved, and worth nothing against what is currently in the cart.
+  const couponInactive = Boolean(
+    appliedCoupon &&
+      !couponFetching &&
+      couponDiscounts &&
+      Object.keys(couponDiscounts).length === 0
+  );
   const canCheckout = items.length > 0 && patient !== null;
 
   return (
@@ -77,7 +93,11 @@ export function Cart({ onCheckout }: CartProps) {
         ) : (
           <div className="py-2">
             {items.map((item) => (
-              <CartItem key={item.item_code} item={item} />
+              <CartItem
+                key={item.item_code}
+                item={item}
+                couponPercent={couponDiscounts?.[item.item_code] ?? 0}
+              />
             ))}
           </div>
         )}
@@ -86,7 +106,11 @@ export function Cart({ onCheckout }: CartProps) {
       {/* Summary and checkout */}
       {items.length > 0 && (
         <div className="border-t px-4 pb-4 pt-2">
-          <CartSummary totals={totals} />
+          <CartSummary
+            totals={totals}
+            couponInactive={couponInactive}
+            couponApplied={couponApplied}
+          />
           <Button
             className="mt-3 h-14 w-full text-base font-semibold shadow-md transition-all"
             disabled={!canCheckout}
