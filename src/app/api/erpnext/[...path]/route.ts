@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionFromRequest } from "@/lib/auth/session";
 
-const ERPNEXT_URL = process.env.ERPNEXT_URL || "https://carevibes.m.frappe.cloud";
+const ERPNEXT_URL = process.env.ERPNEXT_URL || "https://iklera.m.frappe.cloud";
 
 async function proxyRequest(
   request: NextRequest,

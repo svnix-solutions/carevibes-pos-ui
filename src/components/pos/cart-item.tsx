@@ -3,17 +3,33 @@
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/cart/calculations";
+import {
+  calculateLine,
+  formatCurrency,
+  round2,
+  MAX_DISCOUNT_PERCENT,
+} from "@/lib/cart/calculations";
 import { useCartStore } from "@/lib/cart/store";
 import type { CartItem as CartItemType } from "@/lib/cart/types";
+import { DiscountInput } from "./discount-input";
 
 interface CartItemProps {
   item: CartItemType;
+  /** Discount percent a coupon grants this line, if any. */
+  couponPercent?: number;
 }
 
-export function CartItem({ item }: CartItemProps) {
+export function CartItem({
+  item,
+  couponPercent = 0,
+}: CartItemProps) {
   const updateQuantity = useCartStore((s) => s.updateQuantity);
   const removeItem = useCartStore((s) => s.removeItem);
+  const setItemDiscount = useCartStore((s) => s.setItemDiscount);
+  const clearItemDiscount = useCartStore((s) => s.clearItemDiscount);
+
+  const line = calculateLine(item, couponPercent);
+  const discounted = line.discountAmount > 0;
 
   function handleRemove() {
     removeItem(item.item_code);
@@ -55,14 +71,44 @@ export function CartItem({ item }: CartItemProps) {
             >
               <Plus className="h-3 w-3" />
             </Button>
+            <DiscountInput
+              size="sm"
+              label="Line discount"
+              base={line.gross}
+              disabled={couponPercent > 0}
+              disabledReason="priced by coupon"
+              maxPercent={MAX_DISCOUNT_PERCENT}
+              maxAmount={round2((line.gross * MAX_DISCOUNT_PERCENT) / 100)}
+              discountType={item.discountType}
+              discountValue={item.discountValue}
+              discountAmount={line.discountAmount}
+              onApply={(type, value) =>
+                setItemDiscount(item.item_code, type, value)
+              }
+              onClear={() => clearItemDiscount(item.item_code)}
+            />
           </div>
           <div className="text-right">
-            <p className="text-sm font-medium">
-              {formatCurrency(item.rate * item.quantity)}
-            </p>
+            {line.discountSource === "coupon" && (
+              <p className="text-[10px] font-medium text-green-600">
+                coupon &minus;{round2(line.discountPercent)}%
+              </p>
+            )}
+            {discounted ? (
+              <p className="text-sm font-medium">
+                <span className="mr-1 text-xs font-normal text-muted-foreground line-through">
+                  {formatCurrency(line.gross)}
+                </span>
+                {formatCurrency(line.net)}
+              </p>
+            ) : (
+              <p className="text-sm font-medium">
+                {formatCurrency(line.gross)}
+              </p>
+            )}
             {item.quantity > 1 && (
               <p className="text-xs text-muted-foreground">
-                {formatCurrency(item.rate)} each
+                {formatCurrency(discounted ? line.netRate : item.rate)} each
               </p>
             )}
           </div>
