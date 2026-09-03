@@ -2,6 +2,7 @@
 
 import { LogOut, Receipt, Calendar, ClipboardList } from "lucide-react";
 import Image from "next/image";
+import ikleraLogo from "../../../public/ikleralogo.png";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -26,9 +27,10 @@ export function POSHeader() {
     <header className="flex h-14 items-center justify-between border-b bg-background px-4">
       <Link href="/billing" aria-label="Iklera Healthcare">
         <Image
-          src="/ikleralogo.png"
+          src={ikleraLogo}
           alt="Iklera Healthcare"
           priority
+          className="h-9 w-auto"
         />
       </Link>
 
