@@ -36,7 +36,8 @@ export function round2(amount: number): number {
  */
 export function calculateLine(
   item: CartItem,
-  couponPercent = 0
+  couponPercent = 0,
+  couponApplied = false
 ): CartLineTotals {
   const qty = item.quantity;
   const gross = round2(item.rate * qty);
@@ -56,18 +57,16 @@ export function calculateLine(
     manualPercent = Math.min(manualPercent, MAX_DISCOUNT_PERCENT);
   }
 
-  // A coupon-covered line is priced by the coupon and nothing else: the manual
-  // control is disabled for these lines, so one line has exactly one source of
-  // discount and the two can never compound. A manual value set before the
-  // coupon arrived is kept but not applied, so removing the coupon restores it
-  // rather than silently discarding what the cashier entered.
+  // A bill carries either a coupon or manual discounts, never both. While a
+  // coupon is applied every manual control on the cart is disabled and the
+  // values behind them are kept but not applied, so removing the coupon
+  // restores what the cashier had entered rather than discarding it.
   //
   // A coupon was approved by whoever created it in ERPNext, so it is not
   // spending the cashier's discretionary allowance and is not capped by it.
-  const couponApplies = couponPercent > 0;
-  const discountPercent = couponApplies ? couponPercent : manualPercent;
+  const discountPercent = couponApplied ? couponPercent : manualPercent;
   const discountSource: CartLineTotals["discountSource"] =
-    discountPercent <= 0 ? null : couponApplies ? "coupon" : "manual";
+    discountPercent <= 0 ? null : couponApplied ? "coupon" : "manual";
 
   const netRate = round2(item.rate * (1 - discountPercent / 100));
   const net = round2(netRate * qty);
@@ -100,13 +99,21 @@ export function calculateLine(
  * matching ERPNext's `apply_discount_on: "Net Total"`, so that per-item GST
  * rates still apply to the right share of the bill.
  */
+export interface TotalsOptions {
+  cartDiscount?: CartDiscount | null;
+  couponDiscounts?: CouponDiscounts;
+  /** True while a coupon is on the cart — suppresses every manual discount. */
+  couponApplied?: boolean;
+}
+
 export function calculateTotals(
   items: CartItem[],
-  cartDiscount?: CartDiscount,
-  couponDiscounts?: CouponDiscounts
+  options: TotalsOptions = {}
 ): CartTotals {
+  const { cartDiscount, couponDiscounts, couponApplied = false } = options;
+
   const base = items.map((item) =>
-    calculateLine(item, couponDiscounts?.[item.item_code] ?? 0)
+    calculateLine(item, couponDiscounts?.[item.item_code] ?? 0, couponApplied)
   );
 
   const subtotal = round2(base.reduce((sum, l) => sum + l.gross, 0));
@@ -131,7 +138,9 @@ export function calculateTotals(
   const cartAllowance = Math.max(0, round2(maxDiscount - lineDiscountAmount));
 
   let cartDiscountAmount = 0;
-  if (cartDiscount && cartDiscount.value > 0 && netTotal > 0) {
+  // The bill discount is a manual discount too, so a coupon suppresses it
+  // alongside the line ones.
+  if (!couponApplied && cartDiscount && cartDiscount.value > 0 && netTotal > 0) {
     const requested =
       cartDiscount.type === "percent"
         ? round2((netTotal * Math.min(cartDiscount.value, MAX_DISCOUNT_PERCENT)) / 100)

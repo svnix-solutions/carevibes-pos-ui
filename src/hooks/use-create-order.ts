@@ -113,11 +113,11 @@ export function useCreateOrder() {
       taxRows,
     }) => {
       const today = new Date().toISOString().split("T")[0];
-      const totals = calculateTotals(
-        items,
-        cartDiscount ?? undefined,
-        couponDiscounts
-      );
+      const totals = calculateTotals(items, {
+        cartDiscount,
+        couponDiscounts,
+        couponApplied: Boolean(coupon),
+      });
 
       // The coupon's discount is already baked into each line's
       // discount_percentage above, so ERPNext must not apply the underlying

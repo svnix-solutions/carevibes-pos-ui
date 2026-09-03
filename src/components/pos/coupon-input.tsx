@@ -28,6 +28,7 @@ export function CouponInput({
   const items = useCartStore((s) => s.items);
   const patient = useCartStore((s) => s.patient);
   const appliedCoupon = useCartStore((s) => s.appliedCoupon);
+  const cartDiscount = useCartStore((s) => s.cartDiscount);
   const setCoupon = useCartStore((s) => s.setCoupon);
 
   const [code, setCode] = useState("");
@@ -65,6 +66,17 @@ export function CouponInput({
       setCoupon(coupon);
       setCode("");
       toast.success(`${coupon.code} applied`);
+
+      // A bill carries one or the other, so say so rather than letting the
+      // cashier notice the totals moved and wonder what happened to the
+      // discount they entered. Nothing is discarded — it returns on removal.
+      const hadManual =
+        items.some((i) => (i.discountValue ?? 0) > 0) || Boolean(cartDiscount);
+      if (hadManual) {
+        toast.info("Manual discounts are paused while a coupon is applied", {
+          duration: 4000,
+        });
+      }
     } catch (err) {
       // Every failure path carries a cashier-readable reason — an expired
       // date, a spent usage limit, or nothing in the cart it covers.
@@ -75,8 +87,15 @@ export function CouponInput({
   }
 
   function handleRemove() {
+    const hadManual =
+      items.some((i) => (i.discountValue ?? 0) > 0) || Boolean(cartDiscount);
     setCoupon(null);
-    toast(`${appliedCoupon?.code} removed`, { duration: 1500 });
+    toast(
+      hadManual
+        ? `${appliedCoupon?.code} removed — manual discounts restored`
+        : `${appliedCoupon?.code} removed`,
+      { duration: 2000 }
+    );
   }
 
   if (appliedCoupon) {

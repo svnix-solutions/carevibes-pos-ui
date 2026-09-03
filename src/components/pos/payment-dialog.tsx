@@ -54,11 +54,11 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
     items,
     patient?.customer
   );
-  const totals = calculateTotals(
-    itemsWithTax,
-    cartDiscount ?? undefined,
-    couponDiscounts
-  );
+  const totals = calculateTotals(itemsWithTax, {
+    cartDiscount,
+    couponDiscounts,
+    couponApplied: Boolean(appliedCoupon),
+  });
   const createOrder = useCreateOrder();
 
   const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([]);

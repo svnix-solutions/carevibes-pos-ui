@@ -31,11 +31,12 @@ export function Cart({ onCheckout }: CartProps) {
     ...item,
     taxRate: item.taxRate ?? taxRates?.[item.item_code] ?? 0,
   }));
-  const totals = calculateTotals(
-    itemsWithTax,
-    cartDiscount ?? undefined,
-    couponDiscounts
-  );
+  const couponApplied = Boolean(appliedCoupon);
+  const totals = calculateTotals(itemsWithTax, {
+    cartDiscount,
+    couponDiscounts,
+    couponApplied,
+  });
   // Applied, resolved, and worth nothing against what is currently in the cart.
   const couponInactive = Boolean(
     appliedCoupon &&
@@ -96,6 +97,7 @@ export function Cart({ onCheckout }: CartProps) {
                 key={item.item_code}
                 item={item}
                 couponPercent={couponDiscounts?.[item.item_code] ?? 0}
+                couponApplied={couponApplied}
               />
             ))}
           </div>
@@ -105,7 +107,11 @@ export function Cart({ onCheckout }: CartProps) {
       {/* Summary and checkout */}
       {items.length > 0 && (
         <div className="border-t px-4 pb-4 pt-2">
-          <CartSummary totals={totals} couponInactive={couponInactive} />
+          <CartSummary
+            totals={totals}
+            couponInactive={couponInactive}
+            couponApplied={couponApplied}
+          />
           <Button
             className="mt-3 h-14 w-full text-base font-semibold shadow-md transition-all"
             disabled={!canCheckout}

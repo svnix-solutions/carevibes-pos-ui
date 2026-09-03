@@ -17,12 +17,15 @@ interface CartSummaryProps {
   editable?: boolean;
   /** Coupon is applied but grants nothing on the current cart. */
   couponInactive?: boolean;
+  /** True while a coupon is on the cart — the bill discount is suppressed. */
+  couponApplied?: boolean;
 }
 
 export function CartSummary({
   totals,
   editable = true,
   couponInactive = false,
+  couponApplied = false,
 }: CartSummaryProps) {
   const cartDiscount = useCartStore((s) => s.cartDiscount);
   const setCartDiscount = useCartStore((s) => s.setCartDiscount);
@@ -77,6 +80,9 @@ export function CartSummary({
             base={totals.netTotal}
             maxPercent={billMaxPercent}
             maxAmount={billMaxAmount}
+            disabled={couponApplied}
+            disabledReason="Bill discount unavailable with a coupon"
+
             discountType={cartDiscount?.type}
             discountValue={cartDiscount?.value}
             discountAmount={totals.cartDiscountAmount}
