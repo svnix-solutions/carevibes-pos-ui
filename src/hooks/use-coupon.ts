@@ -87,30 +87,31 @@ async function lookupCoupon(code: string): Promise<CouponDoc> {
  * no discount and no error. Checking here is what turns that silence into a
  * reason the cashier can act on.
  */
-function assertUsable(coupon: CouponDoc, customer: string) {
+function couponUnusableReason(
+  coupon: CouponDoc,
+  customer: string
+): string | null {
   const now = today();
 
   if (coupon.valid_from && now < coupon.valid_from) {
-    throw new CouponError(
-      `${coupon.coupon_code} is not valid until ${coupon.valid_from}.`
-    );
+    return `${coupon.coupon_code} is not valid until ${coupon.valid_from}.`;
   }
   if (coupon.valid_upto && now > coupon.valid_upto) {
-    throw new CouponError(
-      `${coupon.coupon_code} expired on ${coupon.valid_upto}.`
-    );
+    return `${coupon.coupon_code} expired on ${coupon.valid_upto}.`;
   }
   if (coupon.maximum_use && (coupon.used ?? 0) >= coupon.maximum_use) {
-    throw new CouponError(
-      `${coupon.coupon_code} has already been used ${coupon.used} of ${coupon.maximum_use} times.`
-    );
+    return `${coupon.coupon_code} has already been used ${coupon.used} of ${coupon.maximum_use} times.`;
   }
   // Gift Card coupons are bound to one customer.
   if (coupon.customer && coupon.customer !== customer) {
-    throw new CouponError(
-      `${coupon.coupon_code} is reserved for a different patient.`
-    );
+    return `${coupon.coupon_code} is reserved for a different patient.`;
   }
+  return null;
+}
+
+function assertUsable(coupon: CouponDoc, customer: string) {
+  const reason = couponUnusableReason(coupon, customer);
+  if (reason) throw new CouponError(reason);
 }
 
 /**
@@ -240,5 +241,152 @@ export function useCouponDiscounts(
     queryFn: () => fetchCouponDiscounts(coupon!.name, items, customer!),
     enabled: Boolean(coupon && customer && items.length),
     staleTime: 60 * 1000,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Browsing what is on offer
+// ---------------------------------------------------------------------------
+
+interface PricingRuleDoc {
+  name: string;
+  rate_or_discount?: string;
+  discount_percentage?: number;
+  discount_amount?: number;
+  rate?: number;
+  apply_on?: string;
+  min_amt?: number;
+  items?: Array<{ item_code?: string }>;
+  item_groups?: Array<{ item_group?: string }>;
+  brands?: Array<{ brand?: string }>;
+}
+
+export interface AvailableCoupon {
+  /** Coupon Code document name. */
+  name: string;
+  /** The code a cashier would otherwise type. */
+  code: string;
+  /** What it takes off, e.g. "10% off". */
+  offer: string;
+  /** What it applies to, e.g. "Laboratory". */
+  scope: string;
+  /** Free-text note from the coupon itself. */
+  note?: string;
+  /** Uses left, or null when unlimited. */
+  remainingUses: number | null;
+  validUpto?: string | null;
+  /** Set when the coupon names a specific customer. */
+  patientSpecific: boolean;
+}
+
+/** Summarise what a Pricing Rule takes off. */
+function describeOffer(rule?: PricingRuleDoc): string {
+  if (!rule) return "Discount";
+  if (rule.rate_or_discount === "Discount Percentage" && rule.discount_percentage) {
+    return `${rule.discount_percentage}% off`;
+  }
+  if (rule.rate_or_discount === "Discount Amount" && rule.discount_amount) {
+    return `₹${rule.discount_amount} off`;
+  }
+  if (rule.rate_or_discount === "Rate" && rule.rate) {
+    return `Fixed rate ₹${rule.rate}`;
+  }
+  return "Discount";
+}
+
+/** Summarise what a Pricing Rule applies to. */
+function describeScope(rule?: PricingRuleDoc): string {
+  if (!rule) return "";
+  switch (rule.apply_on) {
+    case "Item Group":
+      return (rule.item_groups ?? [])
+        .map((r) => r.item_group)
+        .filter(Boolean)
+        .join(", ");
+    case "Item Code":
+      return (rule.items ?? [])
+        .map((r) => r.item_code)
+        .filter(Boolean)
+        .join(", ");
+    case "Brand":
+      return (rule.brands ?? []).map((r) => r.brand).filter(Boolean).join(", ");
+    case "Transaction":
+      return "whole bill";
+    default:
+      return "";
+  }
+}
+
+/**
+ * Coupons this patient could actually use right now.
+ *
+ * Validity is filtered here rather than in the query because the rules involve
+ * null dates and an unlimited-use sentinel that read awkwardly as Frappe
+ * filters — and because reusing the same check the typed path uses keeps the
+ * list and the apply step from ever disagreeing about what is valid.
+ */
+export function useAvailableCoupons(customer?: string) {
+  return useQuery<AvailableCoupon[]>({
+    queryKey: ["available-coupons", customer],
+    enabled: Boolean(customer),
+    staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const all = await erpnext.getList<CouponDoc & { description?: string }>(
+        "Coupon Code",
+        {
+          fields: [
+            "name",
+            "coupon_code",
+            "coupon_type",
+            "customer",
+            "pricing_rule",
+            "valid_from",
+            "valid_upto",
+            "maximum_use",
+            "used",
+            "description",
+          ],
+          orderBy: "modified desc",
+          limit: 100,
+        }
+      );
+
+      const usable = all.filter(
+        (c) => couponUnusableReason(c, customer!) === null
+      );
+
+      // One fetch per distinct rule — the child tables naming the covered
+      // items only come back on the full document.
+      const ruleNames = [
+        ...new Set(usable.map((c) => c.pricing_rule).filter(Boolean)),
+      ] as string[];
+      const rules = new Map<string, PricingRuleDoc>();
+      await Promise.all(
+        ruleNames.map(async (n) => {
+          try {
+            rules.set(n, await erpnext.getDoc<PricingRuleDoc>("Pricing Rule", n));
+          } catch {
+            // A coupon whose rule cannot be read still lists, just without
+            // the "10% off Laboratory" summary.
+          }
+        })
+      );
+
+      return usable.map((c) => {
+        const rule = c.pricing_rule ? rules.get(c.pricing_rule) : undefined;
+        return {
+          name: c.name,
+          code: c.coupon_code,
+          offer: describeOffer(rule),
+          scope: describeScope(rule),
+          note: c.description?.replace(/<[^>]*>/g, "").trim() || undefined,
+          remainingUses: c.maximum_use
+            ? Math.max(0, c.maximum_use - (c.used ?? 0))
+            : null,
+          validUpto: c.valid_upto,
+          patientSpecific: Boolean(c.customer),
+        };
+      });
+    },
   });
 }
