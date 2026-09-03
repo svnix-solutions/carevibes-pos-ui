@@ -34,6 +34,10 @@ interface DiscountInputProps {
   label?: string;
   /** Compact trigger for cart line rows. */
   size?: "sm" | "default";
+  /** Block editing entirely — e.g. a coupon already prices this line. */
+  disabled?: boolean;
+  /** Shown in place of the control when disabled. */
+  disabledReason?: string;
 }
 
 export function DiscountInput({
@@ -47,6 +51,8 @@ export function DiscountInput({
   maxAmount,
   label = "Discount",
   size = "default",
+  disabled = false,
+  disabledReason,
 }: DiscountInputProps) {
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<DiscountType>(discountType ?? "percent");
@@ -89,6 +95,21 @@ export function DiscountInput({
   }
 
   const active = discountAmount > 0;
+
+  if (disabled) {
+    return (
+      <span
+        className={
+          size === "sm"
+            ? "px-1.5 text-[11px] text-muted-foreground/70"
+            : "px-2 text-xs text-muted-foreground/70"
+        }
+        title={disabledReason}
+      >
+        {disabledReason ?? "Discount unavailable"}
+      </span>
+    );
+  }
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>

@@ -56,18 +56,18 @@ export function calculateLine(
     manualPercent = Math.min(manualPercent, MAX_DISCOUNT_PERCENT);
   }
 
+  // A coupon-covered line is priced by the coupon and nothing else: the manual
+  // control is disabled for these lines, so one line has exactly one source of
+  // discount and the two can never compound. A manual value set before the
+  // coupon arrived is kept but not applied, so removing the coupon restores it
+  // rather than silently discarding what the cashier entered.
+  //
   // A coupon was approved by whoever created it in ERPNext, so it is not
   // spending the cashier's discretionary allowance and is not capped by it.
-  // The two never stack on one line — the better of the two wins, which is
-  // also what stops a coupon and a manual discount compounding into a
-  // discount neither party intended.
-  const discountPercent = Math.max(manualPercent, couponPercent);
+  const couponApplies = couponPercent > 0;
+  const discountPercent = couponApplies ? couponPercent : manualPercent;
   const discountSource: CartLineTotals["discountSource"] =
-    discountPercent <= 0
-      ? null
-      : couponPercent > manualPercent
-        ? "coupon"
-        : "manual";
+    discountPercent <= 0 ? null : couponApplies ? "coupon" : "manual";
 
   const netRate = round2(item.rate * (1 - discountPercent / 100));
   const net = round2(netRate * qty);

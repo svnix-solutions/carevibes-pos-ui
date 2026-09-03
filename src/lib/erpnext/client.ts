@@ -199,6 +199,18 @@ export const erpnext = new ERPNextClient();
  */
 export const ERPNEXT_COMPANY = process.env.NEXT_PUBLIC_ERPNEXT_COMPANY ?? "";
 
+if (!ERPNEXT_COMPANY && typeof window !== "undefined") {
+  // Worth shouting about: tax templates, pricing rules and coupons all filter
+  // on company server-side, and each returns an empty result rather than an
+  // error when it is blank — so the POS looks like it works while quietly
+  // charging no GST and refusing every coupon.
+  console.error(
+    "[POS] NEXT_PUBLIC_ERPNEXT_COMPANY is not set. GST will not be applied " +
+      "and no coupon will ever match until it is. Set it and restart the dev " +
+      "server — NEXT_PUBLIC_ vars are inlined at build time."
+  );
+}
+
 /**
  * Selling Price List used when asking ERPNext to price a cart (the pricing
  * rule engine needs one to resolve a coupon). "Standard Selling" is the only
