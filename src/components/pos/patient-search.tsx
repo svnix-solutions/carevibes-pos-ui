@@ -20,6 +20,7 @@ import { usePatients } from "@/hooks/use-patients";
 import { useCreatePatient } from "@/hooks/use-create-patient";
 import { useCartStore } from "@/lib/cart/store";
 import { toast } from "sonner";
+import { AgeDobInput } from "./age-dob-input";
 import type { ERPNextPatient } from "@/types/erpnext";
 
 function getInitials(name: string) {
@@ -183,29 +184,22 @@ export function PatientSearch() {
               value={newEmail}
               onChange={(e) => setNewEmail(e.target.value)}
             />
-            <div className="grid grid-cols-2 gap-2">
-              <Input
-                type="date"
-                placeholder="Date of birth"
-                value={newDob}
-                onChange={(e) => setNewDob(e.target.value)}
-              />
-              <Select value={newBloodGroup} onValueChange={(v) => setNewBloodGroup(v ?? "")}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Blood group" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="A Positive">A+</SelectItem>
-                  <SelectItem value="A Negative">A-</SelectItem>
-                  <SelectItem value="B Positive">B+</SelectItem>
-                  <SelectItem value="B Negative">B-</SelectItem>
-                  <SelectItem value="O Positive">O+</SelectItem>
-                  <SelectItem value="O Negative">O-</SelectItem>
-                  <SelectItem value="AB Positive">AB+</SelectItem>
-                  <SelectItem value="AB Negative">AB-</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <AgeDobInput dob={newDob} onDobChange={setNewDob} />
+            <Select value={newBloodGroup} onValueChange={(v) => setNewBloodGroup(v ?? "")}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Blood group" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="A Positive">A+</SelectItem>
+                <SelectItem value="A Negative">A-</SelectItem>
+                <SelectItem value="B Positive">B+</SelectItem>
+                <SelectItem value="B Negative">B-</SelectItem>
+                <SelectItem value="O Positive">O+</SelectItem>
+                <SelectItem value="O Negative">O-</SelectItem>
+                <SelectItem value="AB Positive">AB+</SelectItem>
+                <SelectItem value="AB Negative">AB-</SelectItem>
+              </SelectContent>
+            </Select>
             <Button
               className="w-full"
               size="sm"

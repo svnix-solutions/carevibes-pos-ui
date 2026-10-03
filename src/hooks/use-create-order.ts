@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { erpnext, ERPNEXT_COMPANY } from "@/lib/erpnext/client";
+import { clinicToday } from "@/lib/date";
 import { calculateTotals, round2 } from "@/lib/cart/calculations";
 import type {
   AppliedCoupon,
@@ -22,6 +23,7 @@ interface CreateOrderInput {
   coupon?: AppliedCoupon | null;
   couponDiscounts?: CouponDiscounts;
   doctor?: string; // Supplier name for custom_doctor field on Sales Order
+  posProfile: string; // POS Profile — required for an is_pos invoice
   lab?: string; // Supplier name for custom_lab field on Sales Order
   taxTemplate?: string; // Sales Taxes and Charges Template name
   taxRows?: TaxTemplateRow[]; // Tax rows from Sales Taxes template (required for API-created docs)
@@ -108,11 +110,13 @@ export function useCreateOrder() {
       coupon,
       couponDiscounts,
       doctor,
+      posProfile,
       lab,
       taxTemplate,
       taxRows,
     }) => {
-      const today = new Date().toISOString().split("T")[0];
+      // Clinic's calendar day — a 2 AM sale must not be booked to yesterday (UTC).
+      const today = clinicToday();
       const totals = calculateTotals(items, {
         cartDiscount,
         couponDiscounts,
@@ -170,6 +174,7 @@ export function useCreateOrder() {
           company: ERPNEXT_COMPANY,
           posting_date: today,
           is_pos: 1,
+          pos_profile: posProfile,
           ...taxFields,
           ...discountFields,
           ...couponFields,

@@ -11,6 +11,7 @@ import type {
   CartItem,
   CouponDiscounts,
 } from "@/lib/cart/types";
+import { clinicToday } from "@/lib/date";
 
 const APPLY_PRICING_RULE =
   "erpnext.accounts.doctype.pricing_rule.pricing_rule.apply_pricing_rule";
@@ -41,8 +42,9 @@ export class CouponError extends Error {
   }
 }
 
+/** Clinic's calendar day — coupon validity is checked against it. */
 function today(): string {
-  return new Date().toISOString().split("T")[0];
+  return clinicToday();
 }
 
 /**

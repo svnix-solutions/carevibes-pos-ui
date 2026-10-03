@@ -26,6 +26,7 @@ import {
   isSettled,
 } from "@/lib/cart/calculations";
 import { PaymentNumpad } from "./payment-numpad";
+import { DOCTOR_CASH_MODE, usePosContext } from "@/hooks/use-pos-context";
 import { Receipt } from "./receipt";
 import type { PaymentLine, PaymentMethod } from "@/lib/cart/types";
 
@@ -60,9 +61,21 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
     couponApplied: Boolean(appliedCoupon),
   });
   const createOrder = useCreateOrder();
+  const { data: posContext, isLoading: posLoading } = usePosContext();
+
+  // Modes come from the user's POS Profile in ERPNext. Doctor Cash only makes
+  // sense when a doctor is on the bill — the margin is settled against them.
+  const modes = (posContext?.payment_modes ?? []).filter(
+    (m) => m.mode !== DOCTOR_CASH_MODE || Boolean(selectedDoctor)
+  );
+  const defaultMode = (modes.find((m) => m.default) ?? modes[0])?.mode ?? "";
 
   const [paymentLines, setPaymentLines] = useState<PaymentLine[]>([]);
-  const [currentMethod, setCurrentMethod] = useState<PaymentMethod>("Cash");
+  const [pickedMethod, setPickedMethod] = useState<PaymentMethod>("");
+  // Fall back to the profile default until the cashier picks (or if the
+  // picked mode disappears, e.g. the doctor was removed from the bill).
+  const currentMethod = modes.some((m) => m.mode === pickedMethod) ? pickedMethod : defaultMode;
+  const currentMode = modes.find((m) => m.mode === currentMethod);
   const [amountInput, setAmountInput] = useState("");
   const [reference, setReference] = useState("");
   const [showReceipt, setShowReceipt] = useState(false);
@@ -72,11 +85,12 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   // Settlement is judged at paisa precision — discounted bills otherwise leave
   // float residue that would block checkout on an exactly-tendered amount.
   const remaining = remainingDue(totalPaid, totals.grandTotal);
+  // Change is only given on cash-type tenders (Cash, Doctor Cash).
   const cashTendered = paymentLines
-    .filter((l) => l.method === "Cash")
+    .filter((l) => l.type === "Cash")
     .reduce((sum, l) => sum + l.amount, 0);
   const nonCashPaid = paymentLines
-    .filter((l) => l.method !== "Cash")
+    .filter((l) => l.type !== "Cash")
     .reduce((sum, l) => sum + l.amount, 0);
   const change = calculateChange(cashTendered, totals.grandTotal - nonCashPaid);
 
@@ -88,7 +102,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
 
     setPaymentLines((prev) => [
       ...prev,
-      { method: currentMethod, amount, reference: reference || undefined },
+      { method: currentMethod, type: currentMode?.type, amount, reference: reference || undefined },
     ]);
     setAmountInput("");
     setReference("");
@@ -103,7 +117,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   }
 
   async function handleConfirm() {
-    if (!patient || remaining > 0) return;
+    if (!patient || remaining > 0 || !posContext?.pos_profile) return;
 
     try {
       const result = await createOrder.mutateAsync({
@@ -114,6 +128,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
         couponDiscounts,
         coupon: appliedCoupon,
         doctor: selectedDoctor?.name,
+        posProfile: posContext.pos_profile,
         lab: selectedLab?.name,
         taxTemplate: taxConfig?.templateName,
         taxRows: taxConfig?.templateTaxRows,
@@ -267,91 +282,71 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
 
         <Separator />
 
-        {/* Payment method tabs */}
-        <Tabs
-          value={currentMethod}
-          onValueChange={(v) => setCurrentMethod(v as PaymentMethod)}
-        >
-          <TabsList className="w-full">
-            <TabsTrigger value="Cash" className="flex-1">Cash</TabsTrigger>
-            <TabsTrigger value="UPI" className="flex-1">UPI</TabsTrigger>
-            <TabsTrigger value="Card" className="flex-1">Card</TabsTrigger>
-          </TabsList>
+        {/* Payment method tabs — from the user's POS Profile */}
+        {posLoading ? (
+          <div className="flex h-24 items-center justify-center">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : !posContext?.pos_profile || modes.length === 0 ? (
+          <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+            No POS Profile with payment modes is set up for your user in ERPNext. Ask an administrator
+            to add you to a POS Profile.
+          </p>
+        ) : (
+          <Tabs value={currentMethod} onValueChange={(v) => setPickedMethod(v as PaymentMethod)}>
+            <TabsList className="w-full">
+              {modes.map((m) => (
+                <TabsTrigger key={m.mode} value={m.mode} className="flex-1">
+                  {m.mode}
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-          <TabsContent value="Cash" className="space-y-3">
-            <div className="text-center">
-              <p className="mb-1 text-sm text-muted-foreground">Enter cash amount</p>
-              <p className="text-2xl font-bold">
-                {amountInput ? formatCurrency(parseFloat(amountInput) || 0) : formatCurrency(0)}
-              </p>
-            </div>
-            <PaymentNumpad value={amountInput} onChange={setAmountInput} />
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={handleFullAmount}
-              >
-                Full Amount
-              </Button>
-              <Button className="flex-1" onClick={addPaymentLine}>
-                Add Cash Payment
-              </Button>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="UPI" className="space-y-3">
-            <Input
-              placeholder="Amount"
-              type="number"
-              value={amountInput}
-              onChange={(e) => setAmountInput(e.target.value)}
-            />
-            <Input
-              placeholder="UPI Reference (optional)"
-              value={reference}
-              onChange={(e) => setReference(e.target.value)}
-            />
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={handleFullAmount}
-              >
-                Full Amount
-              </Button>
-              <Button className="flex-1" onClick={addPaymentLine}>
-                Add UPI Payment
-              </Button>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="Card" className="space-y-3">
-            <Input
-              placeholder="Amount"
-              type="number"
-              value={amountInput}
-              onChange={(e) => setAmountInput(e.target.value)}
-            />
-            <Input
-              placeholder="Card Reference / Last 4 digits (optional)"
-              value={reference}
-              onChange={(e) => setReference(e.target.value)}
-            />
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={handleFullAmount}
-              >
-                Full Amount
-              </Button>
-              <Button className="flex-1" onClick={addPaymentLine}>
-                Add Card Payment
-              </Button>
-            </div>
-          </TabsContent>
-        </Tabs>
+            {modes.map((m) => (
+              <TabsContent key={m.mode} value={m.mode} className="space-y-3">
+                {m.mode === DOCTOR_CASH_MODE && (
+                  <p className="rounded-lg bg-amber-50 p-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                    {selectedDoctor?.supplier_name} keeps this cash. It&apos;s recorded against their ledger and
+                    settled with their margin.
+                  </p>
+                )}
+                {m.type === "Cash" ? (
+                  <>
+                    <div className="text-center">
+                      <p className="mb-1 text-sm text-muted-foreground">Enter amount received</p>
+                      <p className="text-2xl font-bold">
+                        {amountInput ? formatCurrency(parseFloat(amountInput) || 0) : formatCurrency(0)}
+                      </p>
+                    </div>
+                    <PaymentNumpad value={amountInput} onChange={setAmountInput} />
+                  </>
+                ) : (
+                  <>
+                    <Input
+                      placeholder="Amount"
+                      type="number"
+                      value={amountInput}
+                      onChange={(e) => setAmountInput(e.target.value)}
+                    />
+                    <Input
+                      placeholder={`${m.mode} reference (optional)`}
+                      value={reference}
+                      onChange={(e) => setReference(e.target.value)}
+                    />
+                  </>
+                )}
+                <div className="flex gap-2">
+                  <Button variant="outline" className="flex-1" onClick={handleFullAmount}>
+                    Full Amount
+                  </Button>
+                  <Button className="flex-1" onClick={addPaymentLine}>
+                    Add {m.mode}
+                  </Button>
+                </div>
+              </TabsContent>
+            ))}
+          </Tabs>
+        )}
 
         <Separator />
 
@@ -362,7 +357,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
               ? "bg-green-600 text-white shadow-lg hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700"
               : ""
           }`}
-          disabled={remaining > 0 || createOrder.isPending}
+          disabled={remaining > 0 || createOrder.isPending || !posContext?.pos_profile}
           onClick={handleConfirm}
         >
           {createOrder.isPending ? (
@@ -380,7 +375,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
 
         {createOrder.isError && (
           <p className="text-center text-sm text-destructive">
-            Failed to create order. Please try again.
+            {createOrder.error?.message || "Failed to create order. Please try again."}
           </p>
         )}
       </DialogContent>

@@ -1,5 +1,6 @@
 "use client";
 
+import { formatClinicDateTime } from "@/lib/date";
 import { Separator } from "@/components/ui/separator";
 import { formatCurrency, round2 } from "@/lib/cart/calculations";
 import type { CartItem, CartTotals, PaymentLine } from "@/lib/cart/types";
@@ -24,7 +25,6 @@ export function Receipt({
   change,
   couponCode,
 }: ReceiptProps) {
-  const now = new Date();
 
   return (
     <div className="space-y-3 text-sm print:text-xs">
@@ -35,7 +35,7 @@ export function Receipt({
         <Separator className="my-2" />
         <p className="font-mono text-xs">{invoiceName}</p>
         <p className="text-xs text-muted-foreground">
-          {now.toLocaleDateString("en-IN")} {now.toLocaleTimeString("en-IN")}
+          {formatClinicDateTime()}
         </p>
       </div>
 
