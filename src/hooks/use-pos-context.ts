@@ -34,3 +34,22 @@ export function usePosContext() {
 
 /** Doctor-retained cash. Only offered when the bill has a doctor on it. */
 export const DOCTOR_CASH_MODE = "Doctor Cash";
+
+/**
+ * Whether the bill's doctor can be paid directly ("Doctor Cash"): the
+ * Supplier's "Allow Doctor Cash" tick-box in ERPNext. Pseudo-doctors such as
+ * "Self" (patient booked a test themselves) have it unticked. Read fresh from
+ * ERPNext rather than from the cart, which may hold a doctor picked earlier.
+ * ERPNext also refuses to submit a Doctor Cash payment that breaks this.
+ */
+export function useDoctorAllowsCash(doctor: string | null | undefined) {
+  return useQuery<boolean>({
+    queryKey: ["doctor-allows-cash", doctor],
+    queryFn: async () => {
+      const s = await erpnext.getDoc<{ custom_allow_doctor_cash?: 0 | 1 }>("Supplier", doctor!);
+      return s.custom_allow_doctor_cash === 1;
+    },
+    enabled: Boolean(doctor),
+    staleTime: 5 * 60 * 1000,
+  });
+}

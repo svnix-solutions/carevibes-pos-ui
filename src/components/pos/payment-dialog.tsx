@@ -25,7 +25,7 @@ import {
   isSettled,
 } from "@/lib/cart/calculations";
 import { PaymentNumpad } from "./payment-numpad";
-import { DOCTOR_CASH_MODE, usePosContext } from "@/hooks/use-pos-context";
+import { DOCTOR_CASH_MODE, useDoctorAllowsCash, usePosContext } from "@/hooks/use-pos-context";
 import { Receipt } from "./receipt";
 import type { PaymentLine, PaymentMethod } from "@/lib/cart/types";
 
@@ -62,10 +62,11 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   const createOrder = useCreateOrder();
   const { data: posContext, isLoading: posLoading } = usePosContext();
 
-  // Modes come from the user's POS Profile in ERPNext. Doctor Cash only makes
-  // sense when a doctor is on the bill — the margin is settled against them.
+  // Modes come from the user's POS Profile in ERPNext. Doctor Cash only when
+  // the bill's doctor takes it — not for "Self" or no doctor.
+  const { data: doctorAllowsCash } = useDoctorAllowsCash(selectedDoctor?.name);
   const modes = (posContext?.payment_modes ?? []).filter(
-    (m) => m.mode !== DOCTOR_CASH_MODE || Boolean(selectedDoctor)
+    (m) => m.mode !== DOCTOR_CASH_MODE || doctorAllowsCash === true
   );
   const defaultMode = (modes.find((m) => m.default) ?? modes[0])?.mode ?? "";
 
