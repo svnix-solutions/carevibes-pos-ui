@@ -24,6 +24,12 @@ interface CreateOrderInput {
   couponDiscounts?: CouponDiscounts;
   doctor?: string; // Supplier name for custom_doctor field on Sales Order
   posProfile: string; // POS Profile — required for an is_pos invoice
+  /**
+   * Bill now, collect later: the invoice is submitted unpaid (a normal credit
+   * invoice, so the patient shows as owing) and settled later by a Payment
+   * Entry from the order screen. The doctor's margin waits until it's paid.
+   */
+  payLater?: boolean;
   lab?: string; // Supplier name for custom_lab field on Sales Order
   taxTemplate?: string; // Sales Taxes and Charges Template name
   taxRows?: TaxTemplateRow[]; // Tax rows from Sales Taxes template (required for API-created docs)
@@ -111,6 +117,7 @@ export function useCreateOrder() {
       couponDiscounts,
       doctor,
       posProfile,
+      payLater,
       lab,
       taxTemplate,
       taxRows,
@@ -173,8 +180,11 @@ export function useCreateOrder() {
           customer: patient.customer,
           company: ERPNEXT_COMPANY,
           posting_date: today,
-          is_pos: 1,
-          pos_profile: posProfile,
+          // Marks it as a POS bill for the Orders screen, paid or not.
+          custom_pos_order: 1,
+          ...(payLater
+            ? { is_pos: 0, due_date: today }
+            : { is_pos: 1, pos_profile: posProfile }),
           ...taxFields,
           ...discountFields,
           ...couponFields,
@@ -184,10 +194,12 @@ export function useCreateOrder() {
           // both would spend two of the coupon's uses for a single sale.
           ...(coupon && { coupon_code: coupon.name }),
           items: toDocItems(items, totals.lines, salesOrder.name),
-          payments: payments.map((p) => ({
-            mode_of_payment: p.method,
-            amount: p.amount,
-          })),
+          ...(!payLater && {
+            payments: payments.map((p) => ({
+              mode_of_payment: p.method,
+              amount: p.amount,
+            })),
+          }),
         }
       );
 

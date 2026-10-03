@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle, CircleDollarSign, Loader2 } from "lucide-react";
+import { CheckCircle, CircleDollarSign, Clock, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -80,6 +80,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   const [reference, setReference] = useState("");
   const [showReceipt, setShowReceipt] = useState(false);
   const [orderResult, setOrderResult] = useState<CreateOrderResult | null>(null);
+  const [billedPayLater, setBilledPayLater] = useState(false);
 
   const totalPaid = paymentLines.reduce((sum, l) => sum + l.amount, 0);
   // Settlement is judged at paisa precision — discounted bills otherwise leave
@@ -116,8 +117,15 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
     setAmountInput(remaining > 0 ? remaining.toFixed(2) : "0");
   }
 
-  async function handleConfirm() {
-    if (!patient || remaining > 0 || !posContext?.pos_profile) return;
+  async function handleConfirm(payLater = false) {
+    if (!patient || !posContext?.pos_profile) return;
+    if (!payLater && remaining > 0) return;
+    if (
+      payLater &&
+      !confirm(`Bill ${formatCurrency(totals.grandTotal)} to ${patient.patient_name} and collect payment later?`)
+    ) {
+      return;
+    }
 
     try {
       const result = await createOrder.mutateAsync({
@@ -129,11 +137,13 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
         coupon: appliedCoupon,
         doctor: selectedDoctor?.name,
         posProfile: posContext.pos_profile,
+        payLater,
         lab: selectedLab?.name,
         taxTemplate: taxConfig?.templateName,
         taxRows: taxConfig?.templateTaxRows,
       });
       setOrderResult(result);
+      setBilledPayLater(payLater);
       setShowReceipt(true);
     } catch {
       // Error is handled by mutation's error state
@@ -147,6 +157,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
     setReference("");
     setShowReceipt(false);
     setOrderResult(null);
+    setBilledPayLater(false);
     onOpenChange(false);
   }
 
@@ -169,7 +180,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-green-600">
               <CheckCircle className="h-6 w-6" />
-              Sale Complete
+              {billedPayLater ? "Billed — payment due" : "Sale Complete"}
             </DialogTitle>
           </DialogHeader>
           <div className="flex flex-col items-center py-2">
@@ -209,6 +220,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
             payments={paymentLines}
             change={change}
             couponCode={appliedCoupon?.code}
+            amountDue={billedPayLater ? (orderResult.erpnextTotals?.grand_total ?? totals.grandTotal) : undefined}
           />
           <div className="flex gap-2">
             <Button variant="outline" className="flex-1" onClick={() => window.print()}>
@@ -358,7 +370,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
               : ""
           }`}
           disabled={remaining > 0 || createOrder.isPending || !posContext?.pos_profile}
-          onClick={handleConfirm}
+          onClick={() => handleConfirm(false)}
         >
           {createOrder.isPending ? (
             <>
@@ -372,6 +384,19 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
             </>
           )}
         </Button>
+
+        {/* Bill now, collect later — only when nothing has been tendered yet. */}
+        {paymentLines.length === 0 && (
+          <Button
+            variant="outline"
+            className="h-11 w-full"
+            disabled={createOrder.isPending || !posContext?.pos_profile}
+            onClick={() => handleConfirm(true)}
+          >
+            <Clock className="mr-2 h-4 w-4" />
+            Pay later
+          </Button>
+        )}
 
         {createOrder.isError && (
           <p className="text-center text-sm text-destructive">

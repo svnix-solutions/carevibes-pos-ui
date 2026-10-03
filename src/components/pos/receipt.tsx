@@ -14,6 +14,8 @@ interface ReceiptProps {
   payments: PaymentLine[];
   change: number;
   couponCode?: string;
+  /** Billed as pay later — nothing collected yet. */
+  amountDue?: number;
 }
 
 export function Receipt({
@@ -24,6 +26,7 @@ export function Receipt({
   payments,
   change,
   couponCode,
+  amountDue,
 }: ReceiptProps) {
 
   return (
@@ -144,24 +147,31 @@ export function Receipt({
       <Separator />
 
       {/* Payments */}
-      <div className="space-y-1">
-        <p className="font-medium">Payment</p>
-        {payments.map((p, i) => (
-          <div key={i} className="flex justify-between">
-            <span className="text-muted-foreground">
-              {p.method}
-              {p.reference ? ` (${p.reference})` : ""}
-            </span>
-            <span>{formatCurrency(p.amount)}</span>
-          </div>
-        ))}
-        {change > 0 && (
-          <div className="flex justify-between font-medium">
-            <span>Change</span>
-            <span>{formatCurrency(change)}</span>
-          </div>
-        )}
-      </div>
+      {amountDue !== undefined && amountDue > 0 ? (
+        <div className="flex justify-between rounded border border-dashed px-2 py-1.5 font-semibold">
+          <span>Payment due (pay later)</span>
+          <span>{formatCurrency(amountDue)}</span>
+        </div>
+      ) : (
+        <div className="space-y-1">
+          <p className="font-medium">Payment</p>
+          {payments.map((p, i) => (
+            <div key={i} className="flex justify-between">
+              <span className="text-muted-foreground">
+                {p.method}
+                {p.reference ? ` (${p.reference})` : ""}
+              </span>
+              <span>{formatCurrency(p.amount)}</span>
+            </div>
+          ))}
+          {change > 0 && (
+            <div className="flex justify-between font-medium">
+              <span>Change</span>
+              <span>{formatCurrency(change)}</span>
+            </div>
+          )}
+        </div>
+      )}
 
       <Separator />
 
