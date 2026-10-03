@@ -42,3 +42,23 @@ export function addDays(iso: string, days: number): string {
 export function formatClinicDateTime(at: Date = new Date()): string {
   return at.toLocaleString("en-IN", { timeZone: clinicTimeZone, dateStyle: "medium", timeStyle: "short" });
 }
+
+/**
+ * Approximate date of birth for a patient who only knows their age: today's
+ * date (at the clinic) that many years ago. 29 Feb in a non-leap year → 28 Feb.
+ */
+export function dobFromAge(years: number): string {
+  const [y, m, d] = clinicToday().split("-").map(Number);
+  const year = y - years;
+  const lastDay = new Date(Date.UTC(year, m, 0)).getUTCDate();
+  return `${year}-${String(m).padStart(2, "0")}-${String(Math.min(d, lastDay)).padStart(2, "0")}`;
+}
+
+/** Completed years between a YYYY-MM-DD birth date and the clinic's today. */
+export function ageFromDob(dob: string): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dob)) return null;
+  const [by, bm, bd] = dob.split("-").map(Number);
+  const [ty, tm, td] = clinicToday().split("-").map(Number);
+  const age = ty - by - (tm < bm || (tm === bm && td < bd) ? 1 : 0);
+  return age >= 0 ? age : null;
+}
