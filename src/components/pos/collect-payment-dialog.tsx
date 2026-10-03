@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { erpnext } from "@/lib/erpnext/client";
 import { formatCurrency } from "@/lib/cart/calculations";
-import { DOCTOR_CASH_MODE, usePosContext } from "@/hooks/use-pos-context";
+import { DOCTOR_CASH_MODE, useDoctorAllowsCash, usePosContext } from "@/hooks/use-pos-context";
 import { useCollectPayment } from "@/hooks/use-collect-payment";
 import { cn } from "@/lib/utils";
 import type { ERPNextSalesInvoice } from "@/types/erpnext";
@@ -41,7 +41,11 @@ export function CollectPaymentDialog({
   const { data: doctor } = useInvoiceDoctor(invoice);
   const collect = useCollectPayment();
 
-  const modes = (posContext?.payment_modes ?? []).filter((m) => m.mode !== DOCTOR_CASH_MODE || Boolean(doctor));
+  const { data: doctorAllowsCash } = useDoctorAllowsCash(doctor);
+  // Doctor Cash only when the bill's doctor takes it — not for "Self" or no doctor.
+  const modes = (posContext?.payment_modes ?? []).filter(
+    (m) => m.mode !== DOCTOR_CASH_MODE || doctorAllowsCash === true
+  );
   const [picked, setPicked] = useState("");
   const mode = modes.some((m) => m.mode === picked) ? picked : (modes.find((m) => m.default) ?? modes[0])?.mode ?? "";
   const [amountInput, setAmountInput] = useState(outstanding.toFixed(2));
