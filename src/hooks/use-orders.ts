@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { erpnext } from "@/lib/erpnext/client";
-import type { ERPNextSalesInvoice, InvoiceStatus } from "@/types/erpnext";
+import type { ERPNextPaymentEntryRow, ERPNextSalesInvoice, InvoiceStatus } from "@/types/erpnext";
 
 export interface OrderFilters {
   dateFrom: string;
@@ -20,7 +20,9 @@ export function useOrders(filters: OrderFilters) {
       const apiFilters: unknown[] = [
         ["posting_date", ">=", dateFrom],
         ["posting_date", "<=", dateTo],
-        ["is_pos", "=", 1],
+        // Every POS bill carries custom_pos_order — paid at the counter
+        // (is_pos) or pay-later (a normal unpaid invoice).
+        ["custom_pos_order", "=", 1],
         ["docstatus", "!=", 0], // exclude drafts
       ];
 
@@ -65,5 +67,23 @@ export function useOrderDetail(name: string) {
     queryKey: ["order", name],
     queryFn: () => erpnext.getDoc<ERPNextSalesInvoice>("Sales Invoice", name),
     enabled: !!name,
+  });
+}
+
+/** Payments recorded later against an invoice (pay-later bills). */
+export function useInvoicePayments(invoice: string) {
+  return useQuery<ERPNextPaymentEntryRow[]>({
+    queryKey: ["invoice-payments", invoice],
+    queryFn: () =>
+      erpnext.getList<ERPNextPaymentEntryRow>("Payment Entry", {
+        fields: ["name", "posting_date", "mode_of_payment", "paid_amount", "reference_no", "docstatus"],
+        filters: [
+          ["Payment Entry Reference", "reference_name", "=", invoice],
+          ["docstatus", "=", 1],
+        ],
+        orderBy: "creation asc",
+        limit: 50,
+      }),
+    enabled: !!invoice,
   });
 }

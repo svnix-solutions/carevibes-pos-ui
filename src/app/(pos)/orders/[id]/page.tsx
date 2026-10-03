@@ -1,6 +1,6 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -9,6 +9,7 @@ import {
   CreditCard,
   Smartphone,
   Receipt,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -16,12 +17,14 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { InvoiceStatusBadge } from "@/components/pos/invoice-status-badge";
-import { useOrderDetail } from "@/hooks/use-orders";
+import { useInvoicePayments, useOrderDetail } from "@/hooks/use-orders";
+import { CollectPaymentDialog } from "@/components/pos/collect-payment-dialog";
 import { formatCurrency } from "@/lib/cart/calculations";
 
 const PAYMENT_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Cash: Banknote,
-  Card: CreditCard,
+  "Doctor Cash": Banknote,
+  "POS Machine": CreditCard,
   UPI: Smartphone,
 };
 
@@ -41,6 +44,8 @@ export default function OrderDetailPage({
 }) {
   const { id } = use(params);
   const { data: order, isLoading } = useOrderDetail(id);
+  const { data: laterPayments } = useInvoicePayments(id);
+  const [collectOpen, setCollectOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -65,8 +70,18 @@ export default function OrderDetailPage({
     );
   }
 
-  const totalPaid = order.payments?.reduce((s, p) => s + p.amount, 0) ?? 0;
-  const outstanding = order.outstanding_amount ?? order.grand_total - totalPaid;
+  // Paid at the counter (invoice payments) or later (Payment Entries).
+  const outstanding = order.outstanding_amount ?? 0;
+  const totalPaid = order.grand_total - outstanding;
+  const canCollect = order.docstatus === 1 && outstanding > 0.005;
+  const paymentRows = [
+    ...(order.payments ?? []).map((p) => ({ label: p.mode_of_payment, amount: p.amount, note: "at the counter" })),
+    ...(laterPayments ?? []).map((p) => ({
+      label: p.mode_of_payment,
+      amount: p.paid_amount,
+      note: `${p.posting_date} · ${p.name}`,
+    })),
+  ];
 
   return (
     <ScrollArea className="h-full">
@@ -90,6 +105,12 @@ export default function OrderDetailPage({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {canCollect && (
+              <Button size="sm" onClick={() => setCollectOpen(true)}>
+                <Wallet className="mr-1.5 h-4 w-4" />
+                Collect payment
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => window.print()}>
               <Printer className="mr-1.5 h-4 w-4" />
               Print
@@ -176,46 +197,53 @@ export default function OrderDetailPage({
         </Card>
 
         {/* Payments */}
-        {order.payments && order.payments.length > 0 && (
-          <Card className="mb-4 p-0">
-            <div className="px-4 py-3">
-              <h3 className="text-sm font-semibold">Payment</h3>
-            </div>
-            <Separator />
-            <div className="space-y-2 px-4 py-3">
-              {order.payments.map((p, i) => {
-                const Icon = PAYMENT_ICONS[p.mode_of_payment] ?? Banknote;
-                return (
-                  <div key={i} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                        <Icon className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <span className="text-sm">{p.mode_of_payment}</span>
+        <Card className="mb-4 p-0">
+          <div className="px-4 py-3">
+            <h3 className="text-sm font-semibold">Payment</h3>
+          </div>
+          <Separator />
+          <div className="space-y-2 px-4 py-3">
+            {paymentRows.length === 0 && (
+              <p className="text-sm text-muted-foreground">Nothing collected yet — billed as pay later.</p>
+            )}
+            {paymentRows.map((p, i) => {
+              const Icon = PAYMENT_ICONS[p.label] ?? Banknote;
+              return (
+                <div key={i} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                      <Icon className="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <span className="text-sm font-medium">
-                      {formatCurrency(p.amount)}
-                    </span>
+                    <div>
+                      <p className="text-sm">{p.label}</p>
+                      <p className="text-xs text-muted-foreground">{p.note}</p>
+                    </div>
                   </div>
-                );
-              })}
-              <Separator />
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Total Paid</span>
-                <span className="font-medium text-green-600">
-                  {formatCurrency(totalPaid)}
-                </span>
-              </div>
-              {outstanding > 0 && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Outstanding</span>
-                  <span className="font-medium text-destructive">
-                    {formatCurrency(outstanding)}
-                  </span>
+                  <span className="text-sm font-medium">{formatCurrency(p.amount)}</span>
                 </div>
-              )}
+              );
+            })}
+            <Separator />
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Total Paid</span>
+              <span className="font-medium text-green-600">{formatCurrency(totalPaid)}</span>
             </div>
-          </Card>
+            {outstanding > 0.005 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Outstanding</span>
+                <span className="font-medium text-destructive">{formatCurrency(outstanding)}</span>
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {canCollect && (
+          <CollectPaymentDialog
+            key={outstanding}
+            invoice={order}
+            open={collectOpen}
+            onOpenChange={setCollectOpen}
+          />
         )}
       </div>
     </ScrollArea>

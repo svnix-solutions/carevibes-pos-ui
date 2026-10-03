@@ -79,6 +79,18 @@ export interface ERPNextSalesInvoice {
   is_pos?: 0 | 1;
   items: ERPNextSIItem[];
   payments?: ERPNextPayment[];
+  debit_to?: string;
+  custom_pos_order?: 0 | 1;
+  docstatus?: 0 | 1 | 2;
+}
+
+export interface ERPNextPaymentEntryRow {
+  name: string;
+  posting_date: string;
+  mode_of_payment: string;
+  paid_amount: number;
+  reference_no?: string;
+  docstatus: 0 | 1 | 2;
 }
 
 export interface ERPNextSIItem {
