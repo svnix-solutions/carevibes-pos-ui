@@ -31,7 +31,7 @@ export function PaymentNumpad({ value, onChange }: PaymentNumpadProps) {
   const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "backspace"];
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       {/* Quick amount buttons */}
       <div className="flex flex-wrap gap-1.5">
         {QUICK_AMOUNTS.map((amt) => (
@@ -48,12 +48,12 @@ export function PaymentNumpad({ value, onChange }: PaymentNumpadProps) {
       </div>
 
       {/* Numpad */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-1.5">
         {keys.map((key) => (
           <Button
             key={key}
             variant="outline"
-            className="h-14 text-lg font-semibold transition-transform active:scale-95"
+            className="h-11 text-lg font-semibold transition-transform active:scale-95"
             onClick={() => handleKey(key)}
           >
             {key === "backspace" ? <Delete className="h-5 w-5" /> : key}

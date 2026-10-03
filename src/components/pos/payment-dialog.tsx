@@ -11,7 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/lib/cart/store";
 import { useCreateOrder } from "@/hooks/use-create-order";
@@ -237,134 +236,143 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
+      {/* Two columns from md: summary + actions | payment entry. Wide-but-short
+          screens (1366x768, 1280x720) then fit without scrolling; anything
+          still too tall scrolls inside the dialog instead of off-screen. */}
+      <DialogContent className="max-h-[calc(100dvh-2rem)] gap-3 overflow-y-auto sm:max-w-md md:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Payment</DialogTitle>
         </DialogHeader>
 
-        {/* Total */}
-        <div className="rounded-xl bg-primary/10 p-5 text-center dark:bg-primary/5">
-          <p className="text-sm font-medium text-muted-foreground">Total Amount</p>
-          <p className="text-4xl font-bold tracking-tight text-primary">
-            {formatCurrency(totals.grandTotal)}
-          </p>
-          {remaining > 0 && totalPaid > 0 && (
-            <p className="mt-1.5 text-sm font-medium text-orange-600 dark:text-orange-400">
-              Remaining: {formatCurrency(remaining)}
-            </p>
-          )}
-          {isFullyPaid && change > 0 && (
-            <p className="mt-1.5 text-sm font-medium text-green-600 dark:text-green-400">
-              Change: {formatCurrency(change)}
-            </p>
-          )}
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] md:gap-6">
+          {/* ── Left: what's owed, what's been added, finish ── */}
+          <div className="flex flex-col gap-3">
+            <div className="rounded-xl bg-primary/10 p-4 text-center dark:bg-primary/5">
+              <p className="text-sm font-medium text-muted-foreground">Total Amount</p>
+              <p className="text-3xl font-bold tracking-tight text-primary md:text-4xl">
+                {formatCurrency(totals.grandTotal)}
+              </p>
+              {remaining > 0 && totalPaid > 0 && (
+                <p className="mt-1 text-sm font-medium text-orange-600 dark:text-orange-400">
+                  Remaining: {formatCurrency(remaining)}
+                </p>
+              )}
+              {isFullyPaid && change > 0 && (
+                <p className="mt-1 text-sm font-medium text-green-600 dark:text-green-400">
+                  Change: {formatCurrency(change)}
+                </p>
+              )}
+            </div>
+
+            {paymentLines.length > 0 && (
+              <div className="space-y-1">
+                {paymentLines.map((line, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between rounded-lg border px-3 py-1.5 animate-in fade-in slide-in-from-top-1 duration-150"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Badge variant="secondary">{line.method}</Badge>
+                      <span className="text-sm font-medium">{formatCurrency(line.amount)}</span>
+                      {line.reference && (
+                        <span className="truncate text-xs text-muted-foreground">Ref: {line.reference}</span>
+                      )}
+                    </div>
+                    <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => removePaymentLine(i)}>
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Actions sit at the bottom of the left column on md+, and after
+                the payment entry on narrow screens. */}
+            <div className="order-last mt-auto hidden flex-col gap-2 md:flex">{renderActions()}</div>
+          </div>
+
+          {/* ── Right: payment modes from the user's POS Profile ── */}
+          <div className="min-w-0">
+            {posLoading ? (
+              <div className="flex h-24 items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : !posContext?.pos_profile || modes.length === 0 ? (
+              <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                No POS Profile with payment modes is set up for your user in ERPNext. Ask an administrator
+                to add you to a POS Profile.
+              </p>
+            ) : (
+              <Tabs value={currentMethod} onValueChange={(v) => setPickedMethod(v as PaymentMethod)}>
+                <TabsList className="w-full">
+                  {modes.map((m) => (
+                    <TabsTrigger key={m.mode} value={m.mode} className="flex-1 px-1 text-xs sm:text-sm">
+                      {m.mode}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+
+                {modes.map((m) => (
+                  <TabsContent key={m.mode} value={m.mode} className="space-y-2.5">
+                    {m.mode === DOCTOR_CASH_MODE && (
+                      <p className="rounded-lg bg-amber-50 p-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                        {selectedDoctor?.supplier_name} keeps this cash. It&apos;s recorded against their ledger and
+                        settled with their margin.
+                      </p>
+                    )}
+                    {m.type === "Cash" ? (
+                      <>
+                        <div className="flex items-baseline justify-between px-1">
+                          <p className="text-sm text-muted-foreground">Amount received</p>
+                          <p className="text-2xl font-bold tabular-nums">
+                            {formatCurrency(parseFloat(amountInput) || 0)}
+                          </p>
+                        </div>
+                        <PaymentNumpad value={amountInput} onChange={setAmountInput} />
+                      </>
+                    ) : (
+                      <>
+                        <Input
+                          placeholder="Amount"
+                          type="number"
+                          value={amountInput}
+                          onChange={(e) => setAmountInput(e.target.value)}
+                        />
+                        <Input
+                          placeholder={`${m.mode} reference (optional)`}
+                          value={reference}
+                          onChange={(e) => setReference(e.target.value)}
+                        />
+                      </>
+                    )}
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="h-10 flex-1" onClick={handleFullAmount}>
+                        Full Amount
+                      </Button>
+                      <Button className="h-10 flex-1" onClick={addPaymentLine}>
+                        Add {m.mode}
+                      </Button>
+                    </div>
+                  </TabsContent>
+                ))}
+              </Tabs>
+            )}
+          </div>
         </div>
 
-        {/* Added payment lines */}
-        {paymentLines.length > 0 && (
-          <div className="space-y-1">
-            {paymentLines.map((line, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between rounded-lg border px-3 py-2 animate-in fade-in slide-in-from-top-1 duration-150"
-              >
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary">{line.method}</Badge>
-                  <span className="text-sm font-medium">
-                    {formatCurrency(line.amount)}
-                  </span>
-                  {line.reference && (
-                    <span className="text-xs text-muted-foreground">
-                      Ref: {line.reference}
-                    </span>
-                  )}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 text-xs"
-                  onClick={() => removePaymentLine(i)}
-                >
-                  Remove
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Narrow screens: actions after the entry, kept in reach at the bottom. */}
+        <div className="sticky -bottom-4 -mx-4 -mb-4 flex flex-col gap-2 border-t bg-background p-4 md:hidden">
+          {renderActions()}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 
-        <Separator />
-
-        {/* Payment method tabs — from the user's POS Profile */}
-        {posLoading ? (
-          <div className="flex h-24 items-center justify-center">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          </div>
-        ) : !posContext?.pos_profile || modes.length === 0 ? (
-          <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
-            No POS Profile with payment modes is set up for your user in ERPNext. Ask an administrator
-            to add you to a POS Profile.
-          </p>
-        ) : (
-          <Tabs value={currentMethod} onValueChange={(v) => setPickedMethod(v as PaymentMethod)}>
-            <TabsList className="w-full">
-              {modes.map((m) => (
-                <TabsTrigger key={m.mode} value={m.mode} className="flex-1">
-                  {m.mode}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-
-            {modes.map((m) => (
-              <TabsContent key={m.mode} value={m.mode} className="space-y-3">
-                {m.mode === DOCTOR_CASH_MODE && (
-                  <p className="rounded-lg bg-amber-50 p-2 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
-                    {selectedDoctor?.supplier_name} keeps this cash. It&apos;s recorded against their ledger and
-                    settled with their margin.
-                  </p>
-                )}
-                {m.type === "Cash" ? (
-                  <>
-                    <div className="text-center">
-                      <p className="mb-1 text-sm text-muted-foreground">Enter amount received</p>
-                      <p className="text-2xl font-bold">
-                        {amountInput ? formatCurrency(parseFloat(amountInput) || 0) : formatCurrency(0)}
-                      </p>
-                    </div>
-                    <PaymentNumpad value={amountInput} onChange={setAmountInput} />
-                  </>
-                ) : (
-                  <>
-                    <Input
-                      placeholder="Amount"
-                      type="number"
-                      value={amountInput}
-                      onChange={(e) => setAmountInput(e.target.value)}
-                    />
-                    <Input
-                      placeholder={`${m.mode} reference (optional)`}
-                      value={reference}
-                      onChange={(e) => setReference(e.target.value)}
-                    />
-                  </>
-                )}
-                <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1" onClick={handleFullAmount}>
-                    Full Amount
-                  </Button>
-                  <Button className="flex-1" onClick={addPaymentLine}>
-                    Add {m.mode}
-                  </Button>
-                </div>
-              </TabsContent>
-            ))}
-          </Tabs>
-        )}
-
-        <Separator />
-
-        {/* Confirm */}
+  function renderActions() {
+    return (
+      <>
         <Button
-          className={`h-14 w-full text-base font-semibold transition-all ${
+          className={`h-12 w-full text-base font-semibold transition-all ${
             isFullyPaid
               ? "bg-green-600 text-white shadow-lg hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700"
               : ""
@@ -389,7 +397,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
         {paymentLines.length === 0 && (
           <Button
             variant="outline"
-            className="h-11 w-full"
+            className="h-10 w-full"
             disabled={createOrder.isPending || !posContext?.pos_profile}
             onClick={() => handleConfirm(true)}
           >
@@ -403,7 +411,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
             {createOrder.error?.message || "Failed to create order. Please try again."}
           </p>
         )}
-      </DialogContent>
-    </Dialog>
-  );
+      </>
+    );
+  }
 }
