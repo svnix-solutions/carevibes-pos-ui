@@ -41,10 +41,13 @@ export interface CartItem {
   discountValue?: number;
 }
 
-export type PaymentMethod = "Cash" | "UPI" | "Card";
+/** An ERPNext Mode of Payment name, as allowed by the user's POS Profile. */
+export type PaymentMethod = string;
 
 export interface PaymentLine {
   method: PaymentMethod;
+  /** Mode of Payment type — "Cash" tenders can give change. */
+  type?: "Cash" | "Bank" | "General" | "Phone";
   amount: number;
   reference?: string;
 }

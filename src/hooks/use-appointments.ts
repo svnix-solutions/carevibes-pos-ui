@@ -3,9 +3,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { erpnext, ERPNEXT_COMPANY } from "@/lib/erpnext/client";
 import type { ERPNextAppointment } from "@/types/erpnext";
+import { clinicToday } from "@/lib/date";
 
 export function useAppointments(date?: string) {
-  const today = date || new Date().toISOString().split("T")[0];
+  const today = date || clinicToday();
 
   return useQuery<ERPNextAppointment[]>({
     queryKey: ["appointments", today],

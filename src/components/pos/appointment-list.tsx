@@ -11,6 +11,7 @@ import { useUpdateAppointment } from "@/hooks/use-update-appointment";
 import { AppointmentCard } from "./appointment-card";
 import { AppointmentForm } from "./appointment-form";
 import { cn } from "@/lib/utils";
+import { clinicToday } from "@/lib/date";
 import { toast } from "sonner";
 import type { ERPNextAppointment, AppointmentStatus } from "@/types/erpnext";
 
@@ -59,7 +60,7 @@ interface AppointmentListProps {
 
 export function AppointmentList({ onBill }: AppointmentListProps) {
   const [selectedDate, setSelectedDate] = useState(
-    () => new Date().toISOString().split("T")[0]
+    () => clinicToday()
   );
   const [formOpen, setFormOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] =

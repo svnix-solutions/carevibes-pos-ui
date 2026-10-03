@@ -10,33 +10,26 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useOrders } from "@/hooks/use-orders";
 import { InvoiceStatusBadge } from "@/components/pos/invoice-status-badge";
 import { cn } from "@/lib/utils";
+import { addDays, clinicToday } from "@/lib/date";
 import { formatCurrency } from "@/lib/cart/calculations";
 import type { InvoiceStatus, ERPNextSalesInvoice } from "@/types/erpnext";
 
 type DatePreset = "today" | "yesterday" | "week" | "month";
 
 function getDateRange(preset: DatePreset): { from: string; to: string } {
-  const now = new Date();
-  const fmt = (d: Date) => d.toISOString().split("T")[0];
+  const today = clinicToday();
 
   switch (preset) {
     case "today":
-      return { from: fmt(now), to: fmt(now) };
+      return { from: today, to: today };
     case "yesterday": {
-      const y = new Date(now);
-      y.setDate(y.getDate() - 1);
-      return { from: fmt(y), to: fmt(y) };
+      const y = addDays(today, -1);
+      return { from: y, to: y };
     }
-    case "week": {
-      const w = new Date(now);
-      w.setDate(w.getDate() - 7);
-      return { from: fmt(w), to: fmt(now) };
-    }
-    case "month": {
-      const m = new Date(now);
-      m.setDate(m.getDate() - 30);
-      return { from: fmt(m), to: fmt(now) };
-    }
+    case "week":
+      return { from: addDays(today, -7), to: today };
+    case "month":
+      return { from: addDays(today, -30), to: today };
   }
 }
 
