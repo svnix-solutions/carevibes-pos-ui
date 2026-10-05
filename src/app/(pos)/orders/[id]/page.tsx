@@ -19,6 +19,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { InvoiceStatusBadge } from "@/components/pos/invoice-status-badge";
 import { useInvoicePayments, useOrderDetail } from "@/hooks/use-orders";
 import { CollectPaymentDialog } from "@/components/pos/collect-payment-dialog";
+import { InvoicePrint } from "@/components/pos/invoice-print";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/cart/calculations";
 
 const PAYMENT_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -46,6 +53,7 @@ export default function OrderDetailPage({
   const { data: order, isLoading } = useOrderDetail(id);
   const { data: laterPayments } = useInvoicePayments(id);
   const [collectOpen, setCollectOpen] = useState(false);
+  const [printOpen, setPrintOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -111,7 +119,7 @@ export default function OrderDetailPage({
                 Collect payment
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={() => window.print()}>
+            <Button variant="outline" size="sm" onClick={() => setPrintOpen(true)}>
               <Printer className="mr-1.5 h-4 w-4" />
               Print
             </Button>
@@ -245,6 +253,15 @@ export default function OrderDetailPage({
             onOpenChange={setCollectOpen}
           />
         )}
+
+        <Dialog open={printOpen} onOpenChange={setPrintOpen}>
+          <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Invoice {order.name}</DialogTitle>
+            </DialogHeader>
+            {printOpen && <InvoicePrint invoiceName={order.name} className="h-[75vh]" />}
+          </DialogContent>
+        </Dialog>
       </div>
     </ScrollArea>
   );
