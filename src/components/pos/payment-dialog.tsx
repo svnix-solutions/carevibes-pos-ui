@@ -26,7 +26,7 @@ import {
 } from "@/lib/cart/calculations";
 import { PaymentNumpad } from "./payment-numpad";
 import { DOCTOR_CASH_MODE, useDoctorAllowsCash, usePosContext } from "@/hooks/use-pos-context";
-import { Receipt } from "./receipt";
+import { InvoicePrint } from "./invoice-print";
 import type { PaymentLine, PaymentMethod } from "@/lib/cart/types";
 
 interface PaymentDialogProps {
@@ -177,7 +177,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   if (showReceipt && orderResult) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-green-600">
               <CheckCircle className="h-6 w-6" />
@@ -213,24 +213,12 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
               </p>
             </div>
           )}
-          <Receipt
-            invoiceName={orderResult.salesInvoice.name}
-            patient={patient!}
-            items={items}
-            totals={totals}
-            payments={paymentLines}
-            change={change}
-            couponCode={appliedCoupon?.code}
-            amountDue={billedPayLater ? (orderResult.erpnextTotals?.grand_total ?? totals.grandTotal) : undefined}
-          />
-          <div className="flex gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => window.print()}>
-              Print Receipt
-            </Button>
-            <Button className="flex-1" onClick={handleNewSale}>
-              New Sale
-            </Button>
-          </div>
+          {/* ERPNext's own rendering of the bill, so the printout is the
+              invoice as booked rather than the till's reconstruction of it. */}
+          <InvoicePrint invoiceName={orderResult.salesInvoice.name} />
+          <Button className="w-full" onClick={handleNewSale}>
+            New Sale
+          </Button>
         </DialogContent>
       </Dialog>
     );
