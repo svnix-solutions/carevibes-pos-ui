@@ -19,13 +19,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { InvoiceStatusBadge } from "@/components/pos/invoice-status-badge";
 import { useInvoicePayments, useOrderDetail } from "@/hooks/use-orders";
 import { CollectPaymentDialog } from "@/components/pos/collect-payment-dialog";
-import { InvoicePrint } from "@/components/pos/invoice-print";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { InvoiceView } from "@/components/pos/invoice-view";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/cart/calculations";
 
 const PAYMENT_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -255,11 +250,14 @@ export default function OrderDetailPage({
         )}
 
         <Dialog open={printOpen} onOpenChange={setPrintOpen}>
-          <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>Invoice {order.name}</DialogTitle>
-            </DialogHeader>
-            {printOpen && <InvoicePrint invoiceName={order.name} className="h-[75vh]" />}
+          <DialogContent className="sm:max-w-4xl">
+            {printOpen && (
+              <InvoiceView
+                invoiceName={order.name}
+                title={<DialogTitle>Invoice {order.name}</DialogTitle>}
+                subtitle={order.customer_name || order.customer}
+              />
+            )}
           </DialogContent>
         </Dialog>
       </div>
