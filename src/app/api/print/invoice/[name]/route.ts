@@ -3,16 +3,12 @@ import { getSessionFromRequest } from "@/lib/auth/session";
 
 const ERPNEXT_URL = process.env.ERPNEXT_URL || "https://iklera.m.frappe.cloud";
 
-/**
- * Print Format the bill is rendered with. The POS shows ERPNext's own PDF
- * rather than drawing a receipt itself, so what the patient takes home is
- * byte-for-byte the invoice ERPNext would print — totals, GST and layout.
- */
+/** Same format the on-screen invoice uses (see InvoiceView). */
 const PRINT_FORMAT =
-  process.env.ERPNEXT_INVOICE_PRINT_FORMAT || "Iklera Print Format";
+  process.env.NEXT_PUBLIC_ERPNEXT_INVOICE_PRINT_FORMAT || "Iklera Print Format";
 
 /**
- * Sales Invoice PDF, rendered by ERPNext. Kept separate from the generic
+ * Sales Invoice PDF, rendered by ERPNext, for the Download button. Kept separate from the generic
  * ERPNext proxy because that one parses every response as JSON, and pinned to
  * Sales Invoice so it can't be used to print arbitrary documents.
  */
