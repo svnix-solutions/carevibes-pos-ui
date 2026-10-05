@@ -35,7 +35,13 @@ export interface CartItem {
   uom: string;
   image?: string;
   item_group?: string;
-  taxRate?: number; // per-item GST rate from Item Tax Template
+  /**
+   * Resolved GST percent for this line. Set fresh from the tax config on every
+   * render (see useCartTax) — any value persisted with the cart is ignored.
+   */
+  taxRate?: number;
+  /** Item Tax Template the rate came from; sent on the invoice line. */
+  itemTaxTemplate?: string;
   discountType?: DiscountType;
   /** Percent (0-100) or a flat amount off the whole line, per discountType. */
   discountValue?: number;

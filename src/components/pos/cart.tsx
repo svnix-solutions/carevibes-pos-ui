@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useCartStore } from "@/lib/cart/store";
 import { calculateTotals, formatCurrency } from "@/lib/cart/calculations";
-import { useItemTaxRates } from "@/hooks/use-tax-template";
+import { useCartTax } from "@/hooks/use-tax-template";
 import { useCouponDiscounts } from "@/hooks/use-coupon";
 import { CartItem } from "./cart-item";
 import { CartSummary } from "./cart-summary";
@@ -24,13 +24,8 @@ export function Cart({ onCheckout }: CartProps) {
   const clearCart = useCartStore((s) => s.clearCart);
   const { data: couponDiscounts, isFetching: couponFetching } =
     useCouponDiscounts(appliedCoupon, items, patient?.customer);
-  const { data: taxRates } = useItemTaxRates(items.map((i) => i.item_code));
-
-  // Merge tax rates into items for per-item calculation
-  const itemsWithTax = items.map((item) => ({
-    ...item,
-    taxRate: item.taxRate ?? taxRates?.[item.item_code] ?? 0,
-  }));
+  const { applyTax } = useCartTax();
+  const itemsWithTax = applyTax(items, couponDiscounts);
   const couponApplied = Boolean(appliedCoupon);
   const totals = calculateTotals(itemsWithTax, {
     cartDiscount,

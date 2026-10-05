@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/lib/cart/store";
 import { useCreateOrder } from "@/hooks/use-create-order";
 import type { CreateOrderResult } from "@/hooks/use-create-order";
-import { useTaxConfig, useItemTaxRates } from "@/hooks/use-tax-template";
+import { useCartTax } from "@/hooks/use-tax-template";
 import { useCouponDiscounts } from "@/hooks/use-coupon";
 import {
   calculateTotals,
@@ -43,17 +43,18 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   const appliedCoupon = useCartStore((s) => s.appliedCoupon);
   const clearCart = useCartStore((s) => s.clearCart);
 
-  const { data: taxConfig } = useTaxConfig();
-  const { data: taxRates } = useItemTaxRates(items.map((i) => i.item_code));
-  const itemsWithTax = items.map((item) => ({
-    ...item,
-    taxRate: item.taxRate ?? taxRates?.[item.item_code] ?? 0,
-  }));
   const { data: couponDiscounts } = useCouponDiscounts(
     appliedCoupon,
     items,
     patient?.customer
   );
+  const {
+    config: taxConfig,
+    applyTax,
+    ready: taxReady,
+    isError: taxError,
+  } = useCartTax();
+  const itemsWithTax = applyTax(items, couponDiscounts);
   const totals = calculateTotals(itemsWithTax, {
     cartDiscount,
     couponDiscounts,
@@ -118,7 +119,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   }
 
   async function handleConfirm(payLater = false) {
-    if (!patient || !posContext?.pos_profile) return;
+    if (!patient || !posContext?.pos_profile || !taxReady) return;
     if (!payLater && remaining > 0) return;
     if (
       payLater &&
@@ -130,7 +131,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
     try {
       const result = await createOrder.mutateAsync({
         patient,
-        items,
+        items: itemsWithTax,
         payments: paymentLines,
         cartDiscount,
         couponDiscounts,
@@ -378,7 +379,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
               ? "bg-green-600 text-white shadow-lg hover:bg-green-700 dark:bg-green-600 dark:hover:bg-green-700"
               : ""
           }`}
-          disabled={remaining > 0 || createOrder.isPending || !posContext?.pos_profile}
+          disabled={remaining > 0 || createOrder.isPending || !posContext?.pos_profile || !taxReady}
           onClick={() => handleConfirm(false)}
         >
           {createOrder.isPending ? (
@@ -399,12 +400,19 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
           <Button
             variant="outline"
             className="h-10 w-full"
-            disabled={createOrder.isPending || !posContext?.pos_profile}
+            disabled={createOrder.isPending || !posContext?.pos_profile || !taxReady}
             onClick={() => handleConfirm(true)}
           >
             <Clock className="mr-2 h-4 w-4" />
             Pay later
           </Button>
+        )}
+
+        {taxError && (
+          <p className="text-center text-sm text-destructive">
+            Couldn&apos;t load GST settings from ERPNext, so the bill can&apos;t be
+            confirmed. Check the connection and refresh the page.
+          </p>
         )}
 
         {createOrder.isError && (
