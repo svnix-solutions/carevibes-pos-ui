@@ -92,10 +92,15 @@ class ERPNextClient {
       orderBy?: string;
       limit?: number;
       start?: number;
+      /** Parent DocType — required by ERPNext when listing a child table directly. */
+      parent?: string;
     }
   ): Promise<T[]> {
     const params: Record<string, string> = {};
 
+    if (options?.parent) {
+      params.parent = options.parent;
+    }
     if (options?.fields) {
       params.fields = JSON.stringify(options.fields);
     }

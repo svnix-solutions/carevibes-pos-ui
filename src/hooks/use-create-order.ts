@@ -75,6 +75,10 @@ function toDocItems(
       uom: item.uom,
       price_list_rate: item.rate,
       rate: line.netRate,
+      // Pin the template the till charged on. ERPNext keeps a template it
+      // also considers valid, so the invoice's GST matches what was collected
+      // (and any disagreement surfaces in the read-back below).
+      ...(item.itemTaxTemplate && { item_tax_template: item.itemTaxTemplate }),
       ...(line.discountPercent > 0 && {
         discount_percentage: line.discountPercent,
         // ERPNext's item-level discount_amount is per UNIT — it is deducted
