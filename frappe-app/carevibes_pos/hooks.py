@@ -1,5 +1,5 @@
 app_name = "carevibes_pos"
-app_title = "CareVibes POS"
-app_publisher = "CareVibes"
-app_description = "Token exchange endpoint for CareVibes POS"
+app_title = "Iklera POS"
+app_publisher = "Iklera Healthcare"
+app_description = "Token exchange endpoint for Iklera POS"
 app_version = "0.1.0"

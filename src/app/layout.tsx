@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CareVibes POS",
-  description: "Point of Sale for CareVibes Healthcare",
+  title: "Iklera POS",
+  description: "Point of Sale for Iklera Healthcare",
 };
 
 export default function RootLayout({

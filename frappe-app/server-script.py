@@ -1,4 +1,4 @@
-# ERPNext Server Script - Token Exchange for CareVibes POS
+# ERPNext Server Script - Token Exchange for Iklera POS
 #
 # Create this in ERPNext at: /app/server-script/new
 #

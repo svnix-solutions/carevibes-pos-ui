@@ -47,7 +47,7 @@ test.describe("Authentication Flow", () => {
     await loginViaBridge(page);
 
     // Verify billing page loaded
-    await expect(page.locator("text=CareVibes POS")).toBeVisible({
+    await expect(page.locator("text=Iklera POS")).toBeVisible({
       timeout: 10_000,
     });
 
