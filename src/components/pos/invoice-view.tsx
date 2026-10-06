@@ -1,10 +1,12 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Download, Loader2, Printer, RotateCw } from "lucide-react";
+import { toast } from "sonner";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { erpnext } from "@/lib/erpnext/client";
+import { printPdf } from "@/lib/print-pdf";
 
 /**
  * Print Format the bill is rendered with — the same one ERPNext's own Print
@@ -13,27 +15,24 @@ import { erpnext } from "@/lib/erpnext/client";
 export const INVOICE_PRINT_FORMAT =
   process.env.NEXT_PUBLIC_ERPNEXT_INVOICE_PRINT_FORMAT || "Iklera Print Format";
 
-/** ERPNext-rendered PDF of the invoice, for saving or sharing. */
+/** ERPNext-rendered PDF of the invoice — what Print and Download send. */
 export function invoicePdfUrl(invoiceName: string) {
   return `/api/print/invoice/${encodeURIComponent(invoiceName)}`;
 }
 
 /**
  * Wrap ERPNext's print HTML the way its /printview page does, so the format's
- * own CSS applies unchanged. On screen it sits as a sheet on the dialog's
- * surface; in print only the sheet's content goes to paper.
+ * own CSS applies unchanged. Used for the on-screen preview only; printing
+ * goes through ERPNext's PDF.
  */
 function toDocument(html: string, style: string) {
   return `<!doctype html><html><head><meta charset="utf-8">
 <base target="_blank">
 <style>${style}</style>
 <style>
-  @page { size: A4; margin: 12mm; }
   html, body { margin: 0; background: transparent; }
-  @media screen {
-    .print-format-gutter { background: transparent; padding: 16px; }
-    .print-format { border-radius: 4px; box-shadow: 0 1px 3px rgb(0 0 0 / 0.12), 0 1px 2px rgb(0 0 0 / 0.08); }
-  }
+  .print-format-gutter { background: transparent; padding: 16px; }
+  .print-format { border-radius: 4px; box-shadow: 0 1px 3px rgb(0 0 0 / 0.12), 0 1px 2px rgb(0 0 0 / 0.08); }
 </style></head>
 <body><div class="print-format-gutter"><div class="print-format">${html}</div></div></body></html>`;
 }
@@ -51,8 +50,8 @@ interface InvoiceViewProps {
 
 /**
  * The Sales Invoice as ERPNext renders it, with one toolbar for everything
- * done to it. Shown as HTML rather than a PDF so there is no viewer chrome
- * inside the dialog, and printed straight from the frame.
+ * done to it. Previewed as HTML so there is no PDF viewer chrome inside the
+ * dialog, but printed from ERPNext's PDF so paper gets the exact A4 layout.
  */
 export function InvoiceView({
   invoiceName,
@@ -61,7 +60,7 @@ export function InvoiceView({
   notice,
   actions,
 }: InvoiceViewProps) {
-  const frameRef = useRef<HTMLIFrameElement>(null);
+  const [printing, setPrinting] = useState(false);
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ["invoice-html", invoiceName, INVOICE_PRINT_FORMAT],
@@ -81,10 +80,15 @@ export function InvoiceView({
     retry: 1,
   });
 
-  function handlePrint() {
-    const frame = frameRef.current?.contentWindow;
-    frame?.focus();
-    frame?.print();
+  async function handlePrint() {
+    setPrinting(true);
+    try {
+      await printPdf(invoicePdfUrl(invoiceName));
+    } catch {
+      toast.error("Couldn't print the invoice. Try Download instead.");
+    } finally {
+      setPrinting(false);
+    }
   }
 
   return (
@@ -107,8 +111,8 @@ export function InvoiceView({
           >
             <Download />
           </a>
-          <Button variant="outline" onClick={handlePrint} disabled={!data}>
-            <Printer />
+          <Button variant="outline" onClick={handlePrint} disabled={printing}>
+            {printing ? <Loader2 className="animate-spin" /> : <Printer />}
             Print
           </Button>
           {actions}
@@ -121,11 +125,10 @@ export function InvoiceView({
       <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg bg-muted">
         {data ? (
           <iframe
-            ref={frameRef}
             srcDoc={data}
             title={`Invoice ${invoiceName}`}
-            // No scripts run in ERPNext's HTML; modals are needed for print().
-            sandbox="allow-same-origin allow-modals allow-popups"
+            // Preview only: no scripts run in ERPNext's HTML.
+            sandbox="allow-same-origin allow-popups"
             className="h-full w-full border-0"
           />
         ) : (
