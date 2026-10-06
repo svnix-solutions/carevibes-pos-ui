@@ -26,7 +26,7 @@ import {
 } from "@/lib/cart/calculations";
 import { PaymentNumpad } from "./payment-numpad";
 import { DOCTOR_CASH_MODE, useDoctorAllowsCash, usePosContext } from "@/hooks/use-pos-context";
-import { InvoicePrint } from "./invoice-print";
+import { InvoiceView } from "./invoice-view";
 import type { PaymentLine, PaymentMethod } from "@/lib/cart/types";
 
 interface PaymentDialogProps {
@@ -177,48 +177,34 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   if (showReceipt && orderResult) {
     return (
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-3xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-green-600">
-              <CheckCircle className="h-6 w-6" />
-              {billedPayLater ? "Billed — payment due" : "Sale Complete"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col items-center py-2">
-            <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-            <p className="text-lg font-semibold">
-              {formatCurrency(
-                orderResult.erpnextTotals?.grand_total ?? totals.grandTotal
-              )}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Invoice: {orderResult.salesInvoice.name}
-            </p>
-          </div>
-
-          {/* The POS and ERPNext each compute totals. With is_pos the payment
-              was already taken against ours, so a divergence leaves a real
-              balance on the invoice and a supervisor needs to know now. */}
-          {orderResult.totalMismatch && (
-            <div className="rounded-lg border border-orange-300 bg-orange-50 p-3 text-sm dark:border-orange-900 dark:bg-orange-950/40">
-              <p className="font-medium text-orange-700 dark:text-orange-400">
-                Total mismatch &mdash; check this invoice
-              </p>
-              <p className="mt-1 text-orange-700/90 dark:text-orange-400/90">
-                Collected {formatCurrency(orderResult.totalMismatch.expected)},
-                but ERPNext booked{" "}
-                {formatCurrency(orderResult.totalMismatch.actual)}.
-              </p>
-            </div>
-          )}
-          {/* ERPNext's own rendering of the bill, so the printout is the
+        <DialogContent className="sm:max-w-4xl">
+          {/* ERPNext's own rendering of the bill, so what's printed is the
               invoice as booked rather than the till's reconstruction of it. */}
-          <InvoicePrint invoiceName={orderResult.salesInvoice.name} />
-          <Button className="w-full" onClick={handleNewSale}>
-            New Sale
-          </Button>
+          <InvoiceView
+            invoiceName={orderResult.salesInvoice.name}
+            title={
+              <DialogTitle className="flex items-center gap-2">
+                <CheckCircle className="size-5 text-green-600" />
+                {billedPayLater ? "Billed — payment due" : "Sale complete"}
+              </DialogTitle>
+            }
+            subtitle={`${orderResult.salesInvoice.name} · ${formatCurrency(
+              orderResult.erpnextTotals?.grand_total ?? totals.grandTotal
+            )}`}
+            notice={
+              // The POS and ERPNext each compute totals. With is_pos the
+              // payment was already taken against ours, so a divergence leaves
+              // a real balance on the invoice and a supervisor needs to know now.
+              orderResult.totalMismatch && (
+                <div className="rounded-lg border border-orange-300 bg-orange-50 px-3 py-2 text-sm text-orange-700 dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-400">
+                  <span className="font-medium">Total mismatch &mdash; check this invoice.</span>{" "}
+                  Collected {formatCurrency(orderResult.totalMismatch.expected)}, but
+                  ERPNext booked {formatCurrency(orderResult.totalMismatch.actual)}.
+                </div>
+              )
+            }
+            actions={<Button onClick={handleNewSale}>New Sale</Button>}
+          />
         </DialogContent>
       </Dialog>
     );
