@@ -38,7 +38,7 @@ setup("authenticate via bridge", async ({ page }) => {
   await page.waitForURL("**/billing", { timeout: 30_000 });
 
   // Verify we landed on the billing page
-  await expect(page.locator("text=CareVibes POS")).toBeVisible({
+  await expect(page.locator("text=Iklera POS")).toBeVisible({
     timeout: 10_000,
   });
 

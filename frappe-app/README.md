@@ -1,4 +1,4 @@
-# CareVibes POS - ERPNext Token Exchange
+# Iklera POS - ERPNext Token Exchange
 
 ## Quick Setup: Server Script (Recommended)
 

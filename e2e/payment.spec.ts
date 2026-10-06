@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Payment Flow", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/billing");
-    await expect(page.locator("text=CareVibes POS")).toBeVisible({
+    await expect(page.locator("text=Iklera POS")).toBeVisible({
       timeout: 10_000,
     });
   });
@@ -47,7 +47,7 @@ test.describe("Payment Flow", () => {
 
     // Reload the page
     await page.reload();
-    await expect(page.locator("text=CareVibes POS")).toBeVisible({
+    await expect(page.locator("text=Iklera POS")).toBeVisible({
       timeout: 10_000,
     });
 

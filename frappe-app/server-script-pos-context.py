@@ -1,4 +1,4 @@
-# ERPNext Server Script - POS Context for CareVibes POS
+# ERPNext Server Script - POS Context for Iklera POS
 #
 # Create this in ERPNext at: /app/server-script/new
 #
