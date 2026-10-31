@@ -5,7 +5,6 @@ import { erpnext } from "@/lib/erpnext/client";
 
 export interface HomeOptions {
   addresses: { name: string; label: string }[];
-  phlebotomists: { name: string; employee_name: string }[];
   states: string[];
   default_phone: string | null;
 }

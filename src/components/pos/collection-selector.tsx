@@ -100,21 +100,6 @@ export function CollectionSelector() {
               onChange={(e) => setCollection({ ...home, time: e.target.value })}
             />
           </div>
-          <select
-            aria-label="Phlebotomist"
-            className={SELECT}
-            value={home.phlebotomist?.name ?? ""}
-            onChange={(e) =>
-              setCollection({ ...home, phlebotomist: options?.phlebotomists.find((p) => p.name === e.target.value) })
-            }
-          >
-            <option value="">Assign phlebotomist later</option>
-            {options?.phlebotomists.map((p) => (
-              <option key={p.name} value={p.name}>
-                {p.employee_name}
-              </option>
-            ))}
-          </select>
           {!(home.address && home.date && home.time) && (
             <p className="text-xs text-muted-foreground">Choose the address, date and time to complete the sale.</p>
           )}

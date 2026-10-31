@@ -125,7 +125,11 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
     if (!payLater && remaining > 0) return;
     if (
       payLater &&
-      !confirm(`Bill ${formatCurrency(totals.grandTotal)} to ${patient.patient_name} and collect payment later?`)
+      !confirm(
+        homeCollectionFor(items, collection)
+          ? `Bill ${formatCurrency(totals.grandTotal)} to ${patient.patient_name} and collect payment at home?`
+          : `Bill ${formatCurrency(totals.grandTotal)} to ${patient.patient_name} and collect payment later?`
+      )
     ) {
       return;
     }
@@ -146,7 +150,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
         payLater,
         lab: selectedLab?.name,
         homeCollection: home?.address && home.date && home.time
-          ? { address: home.address.name, date: home.date, time: home.time, phlebotomist: home.phlebotomist?.name }
+          ? { address: home.address.name, date: home.date, time: home.time }
           : undefined,
         taxTemplate: taxConfig?.templateName,
         taxRows: taxConfig?.templateTaxRows,
@@ -397,7 +401,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
             onClick={() => handleConfirm(true)}
           >
             <Clock className="mr-2 h-4 w-4" />
-            Pay later
+            {homeCollectionFor(items, collection) ? "Pay at home" : "Pay later"}
           </Button>
         )}
 
