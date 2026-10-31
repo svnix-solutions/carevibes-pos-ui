@@ -31,6 +31,8 @@ interface CreateOrderInput {
    */
   payLater?: boolean;
   lab?: string; // Supplier name for custom_lab field on Sales Order
+  /** Mark the order as a home collection once it's billed. */
+  homeCollection?: { address: string; phlebotomist?: string };
   taxTemplate?: string; // Sales Taxes and Charges Template name
   taxRows?: TaxTemplateRow[]; // Tax rows from Sales Taxes template (required for API-created docs)
 }
@@ -50,6 +52,8 @@ export interface CreateOrderResult {
   erpnextTotals: ErpNextTotals | null;
   /** Set when ERPNext's grand total differs from what the cashier was shown. */
   totalMismatch: { expected: number; actual: number } | null;
+  /** The sale went through, but marking it a home collection failed. */
+  homeCollectionError: string | null;
 }
 
 /**
@@ -123,6 +127,7 @@ export function useCreateOrder() {
       posProfile,
       payLater,
       lab,
+      homeCollection,
       taxTemplate,
       taxRows,
     }) => {
@@ -210,6 +215,22 @@ export function useCreateOrder() {
       // Step 4: Submit Sales Invoice (with retry for TimestampMismatchError)
       await erpnext.submitDoc("Sales Invoice", salesInvoice.name);
 
+      // The sale is committed from here, so a failure must not look like a
+      // failed sale: it's reported on the receipt, and the order can be fixed
+      // by hand in ERPNext.
+      let homeCollectionError: string | null = null;
+      if (homeCollection) {
+        try {
+          await erpnext.callMethod("phlebo_pos_set_home", {
+            sales_order: salesOrder.name,
+            patient: patient.name,
+            ...homeCollection,
+          });
+        } catch (err) {
+          homeCollectionError = err instanceof Error ? err.message : "Unknown error";
+        }
+      }
+
       // Step 5: Read back what ERPNext actually booked. The POS and ERPNext
       // each compute totals, so this is the only way to know they agree — and
       // with is_pos the payment was already collected against our figure.
@@ -237,7 +258,7 @@ export function useCreateOrder() {
         // Read-back is diagnostic only — the sale is already committed.
       }
 
-      return { salesOrder, salesInvoice, erpnextTotals, totalMismatch };
+      return { salesOrder, salesInvoice, erpnextTotals, totalMismatch, homeCollectionError };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });

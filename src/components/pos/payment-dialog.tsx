@@ -26,6 +26,7 @@ import {
 } from "@/lib/cart/calculations";
 import { PaymentNumpad } from "./payment-numpad";
 import { DOCTOR_CASH_MODE, useDoctorAllowsCash, usePosContext } from "@/hooks/use-pos-context";
+import { homeCollectionFor } from "@/lib/cart/collection";
 import { InvoiceView } from "./invoice-view";
 import type { PaymentLine, PaymentMethod } from "@/lib/cart/types";
 
@@ -42,6 +43,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
   const cartDiscount = useCartStore((s) => s.cartDiscount);
   const appliedCoupon = useCartStore((s) => s.appliedCoupon);
   const clearCart = useCartStore((s) => s.clearCart);
+  const collection = useCartStore((s) => s.collection);
 
   const { data: couponDiscounts } = useCouponDiscounts(
     appliedCoupon,
@@ -128,6 +130,9 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
       return;
     }
 
+    const home = homeCollectionFor(items, collection);
+    if (home && !home.address) return;
+
     try {
       const result = await createOrder.mutateAsync({
         patient,
@@ -140,6 +145,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
         posProfile: posContext.pos_profile,
         payLater,
         lab: selectedLab?.name,
+        homeCollection: home?.address && { address: home.address.name, phlebotomist: home.phlebotomist?.name },
         taxTemplate: taxConfig?.templateName,
         taxRows: taxConfig?.templateTaxRows,
       });
@@ -195,11 +201,22 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
               // The POS and ERPNext each compute totals. With is_pos the
               // payment was already taken against ours, so a divergence leaves
               // a real balance on the invoice and a supervisor needs to know now.
-              orderResult.totalMismatch && (
-                <div className="rounded-lg border border-orange-300 bg-orange-50 px-3 py-2 text-sm text-orange-700 dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-400">
-                  <span className="font-medium">Total mismatch &mdash; check this invoice.</span>{" "}
-                  Collected {formatCurrency(orderResult.totalMismatch.expected)}, but
-                  ERPNext booked {formatCurrency(orderResult.totalMismatch.actual)}.
+              (orderResult.totalMismatch || orderResult.homeCollectionError) && (
+                <div className="space-y-2">
+                  {orderResult.totalMismatch && (
+                    <div className="rounded-lg border border-orange-300 bg-orange-50 px-3 py-2 text-sm text-orange-700 dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-400">
+                      <span className="font-medium">Total mismatch &mdash; check this invoice.</span>{" "}
+                      Collected {formatCurrency(orderResult.totalMismatch.expected)}, but
+                      ERPNext booked {formatCurrency(orderResult.totalMismatch.actual)}.
+                    </div>
+                  )}
+                  {orderResult.homeCollectionError && (
+                    <div className="rounded-lg border border-orange-300 bg-orange-50 px-3 py-2 text-sm text-orange-700 dark:border-orange-900 dark:bg-orange-950/40 dark:text-orange-400">
+                      <span className="font-medium">Not marked as a home collection.</span>{" "}
+                      The sale is saved. Set it on Sales Order {orderResult.salesOrder.name} in
+                      ERPNext. ({orderResult.homeCollectionError})
+                    </div>
+                  )}
                 </div>
               )
             }

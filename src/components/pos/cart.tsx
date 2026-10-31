@@ -3,6 +3,7 @@
 import { ShoppingCart, Trash2, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { collectionReady } from "@/lib/cart/collection";
 import { useCartStore } from "@/lib/cart/store";
 import { calculateTotals, formatCurrency } from "@/lib/cart/calculations";
 import { useCartTax } from "@/hooks/use-tax-template";
@@ -10,6 +11,7 @@ import { useCouponDiscounts } from "@/hooks/use-coupon";
 import { CartItem } from "./cart-item";
 import { CartSummary } from "./cart-summary";
 import { PatientSearch } from "./patient-search";
+import { CollectionSelector } from "./collection-selector";
 import { DoctorSelector } from "./doctor-selector";
 
 interface CartProps {
@@ -22,6 +24,7 @@ export function Cart({ onCheckout }: CartProps) {
   const cartDiscount = useCartStore((s) => s.cartDiscount);
   const appliedCoupon = useCartStore((s) => s.appliedCoupon);
   const clearCart = useCartStore((s) => s.clearCart);
+  const collection = useCartStore((s) => s.collection);
   const { data: couponDiscounts, isFetching: couponFetching } =
     useCouponDiscounts(appliedCoupon, items, patient?.customer);
   const { applyTax } = useCartTax();
@@ -39,7 +42,7 @@ export function Cart({ onCheckout }: CartProps) {
       couponDiscounts &&
       Object.keys(couponDiscounts).length === 0
   );
-  const canCheckout = items.length > 0 && patient !== null;
+  const canCheckout = items.length > 0 && patient !== null && collectionReady(items, collection);
 
   return (
     <div className="flex h-full flex-col border-l bg-background">
@@ -47,6 +50,7 @@ export function Cart({ onCheckout }: CartProps) {
       <div className="space-y-2 border-b px-4 py-3">
         <PatientSearch />
         <DoctorSelector />
+        <CollectionSelector />
       </div>
 
       {/* Cart header */}
