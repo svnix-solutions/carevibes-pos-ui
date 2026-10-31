@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { InvoiceStatusBadge } from "@/components/pos/invoice-status-badge";
 import { useInvoicePayments, useOrderDetail } from "@/hooks/use-orders";
+import { ClinicSamplesCard } from "@/components/pos/clinic-samples-card";
 import { CollectPaymentDialog } from "@/components/pos/collect-payment-dialog";
 import { InvoiceView } from "@/components/pos/invoice-view";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -239,6 +240,8 @@ export default function OrderDetailPage({
             )}
           </div>
         </Card>
+
+        <ClinicSamplesCard invoice={order.name} />
 
         {canCollect && (
           <CollectPaymentDialog
