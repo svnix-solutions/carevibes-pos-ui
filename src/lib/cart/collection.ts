@@ -8,7 +8,6 @@ export type CollectionChoice =
       date?: string; // YYYY-MM-DD
       time?: string; // HH:MM
       address?: { name: string; label: string };
-      phlebotomist?: { name: string; employee_name: string };
     };
 
 /** Tests that need a sample drawn. Radiology doesn't. */
