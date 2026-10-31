@@ -3,6 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { MAX_DISCOUNT_PERCENT } from "./calculations";
+import type { CollectionChoice } from "./collection";
 import type {
   AppliedCoupon,
   CartDiscount,
@@ -28,6 +29,7 @@ interface CartState {
   appliedCoupon: AppliedCoupon | null;
   selectedLab: ERPNextSupplier | null;
   selectedDoctor: ERPNextSupplier | null;
+  collection: CollectionChoice;
 
   setPatient: (patient: ERPNextPatient | null) => void;
   addItem: (item: Omit<CartItem, "quantity">) => void;
@@ -47,6 +49,7 @@ interface CartState {
   setCoupon: (coupon: AppliedCoupon | null) => void;
   setLab: (lab: ERPNextSupplier | null) => void;
   setDoctor: (doctor: ERPNextSupplier | null) => void;
+  setCollection: (collection: CollectionChoice) => void;
   clearCart: () => void;
 }
 
@@ -60,6 +63,7 @@ export const useCartStore = create<CartState>()(
       appliedCoupon: null,
       selectedLab: null,
       selectedDoctor: null,
+      collection: { mode: "clinic" },
 
       // A coupon is priced against a specific patient, so changing the patient
       // invalidates it rather than silently carrying it to the next person.
@@ -70,6 +74,11 @@ export const useCartStore = create<CartState>()(
             state.patient?.customer === patient?.customer
               ? state.appliedCoupon
               : null,
+          // An address belongs to one patient, so a home choice can't carry over.
+          collection:
+            state.patient?.name === patient?.name
+              ? state.collection
+              : { mode: "clinic" },
         })),
 
       addItem: (item) =>
@@ -169,6 +178,8 @@ export const useCartStore = create<CartState>()(
 
       setDoctor: (doctor) => set({ selectedDoctor: doctor }),
 
+      setCollection: (collection) => set({ collection }),
+
       clearCart: () =>
         set({
           patient: null,
@@ -178,6 +189,7 @@ export const useCartStore = create<CartState>()(
           appliedCoupon: null,
           selectedLab: null,
           selectedDoctor: null,
+          collection: { mode: "clinic" },
         }),
     }),
     {
@@ -192,6 +204,7 @@ export const useCartStore = create<CartState>()(
         appliedCoupon: state.appliedCoupon,
         selectedLab: state.selectedLab,
         selectedDoctor: state.selectedDoctor,
+        collection: state.collection,
       }),
     }
   )

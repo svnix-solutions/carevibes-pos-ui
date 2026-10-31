@@ -5,6 +5,7 @@ import { ItemCatalog } from "@/components/pos/item-catalog";
 import { Cart } from "@/components/pos/cart";
 import { PaymentDialog } from "@/components/pos/payment-dialog";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
+import { collectionReady } from "@/lib/cart/collection";
 import { useCartStore } from "@/lib/cart/store";
 
 export default function BillingPage() {
@@ -13,7 +14,8 @@ export default function BillingPage() {
   const items = useCartStore((s) => s.items);
   const patient = useCartStore((s) => s.patient);
 
-  const canCheckout = items.length > 0 && patient !== null;
+  const collection = useCartStore((s) => s.collection);
+  const canCheckout = items.length > 0 && patient !== null && collectionReady(items, collection);
 
   useKeyboardShortcuts({
     searchInputRef,
