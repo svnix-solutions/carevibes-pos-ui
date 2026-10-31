@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useHomeOptions, useSaveAddress, type HomeOptions, type NewAddress } from "@/hooks/use-home-collection";
+import { addDays, clinicToday } from "@/lib/date";
 import { hasLabItems } from "@/lib/cart/collection";
 import { useCartStore } from "@/lib/cart/store";
 import { cn } from "@/lib/utils";
 
 const NEW_ADDRESS = "__new__";
 const SELECT = "h-9 w-full rounded-md border bg-background px-2 text-sm";
+const MAX_DAYS_AHEAD = 90;
 
 /** At clinic / home collection, for carts with lab tests and a patient. */
 export function CollectionSelector() {
@@ -41,7 +43,10 @@ export function CollectionSelector() {
             key={mode}
             type="button"
             aria-pressed={collection.mode === mode}
-            onClick={() => setCollection({ mode })}
+            onClick={() => {
+              if (mode === collection.mode) return;
+              setCollection(mode === "home" ? { mode, date: clinicToday() } : { mode });
+            }}
             className={cn(
               "flex h-8 items-center justify-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground",
               collection.mode === mode && "bg-background text-foreground shadow-sm"
@@ -77,6 +82,24 @@ export function CollectionSelector() {
             ))}
             <option value={NEW_ADDRESS}>+ New address</option>
           </select>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="date"
+              aria-label="Collection date"
+              className={SELECT}
+              min={clinicToday()}
+              max={addDays(clinicToday(), MAX_DAYS_AHEAD)}
+              value={home.date ?? ""}
+              onChange={(e) => setCollection({ ...home, date: e.target.value })}
+            />
+            <input
+              type="time"
+              aria-label="Collection time"
+              className={SELECT}
+              value={home.time ?? ""}
+              onChange={(e) => setCollection({ ...home, time: e.target.value })}
+            />
+          </div>
           <select
             aria-label="Phlebotomist"
             className={SELECT}
@@ -92,7 +115,9 @@ export function CollectionSelector() {
               </option>
             ))}
           </select>
-          {!home.address && <p className="text-xs text-muted-foreground">Choose an address to complete the sale.</p>}
+          {!(home.address && home.date && home.time) && (
+            <p className="text-xs text-muted-foreground">Choose the address, date and time to complete the sale.</p>
+          )}
         </>
       )}
 

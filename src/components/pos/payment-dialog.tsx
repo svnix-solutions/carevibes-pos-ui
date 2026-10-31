@@ -131,7 +131,7 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
     }
 
     const home = homeCollectionFor(items, collection);
-    if (home && !home.address) return;
+    if (home && !(home.address && home.date && home.time)) return;
 
     try {
       const result = await createOrder.mutateAsync({
@@ -145,7 +145,9 @@ export function PaymentDialog({ open, onOpenChange }: PaymentDialogProps) {
         posProfile: posContext.pos_profile,
         payLater,
         lab: selectedLab?.name,
-        homeCollection: home?.address && { address: home.address.name, phlebotomist: home.phlebotomist?.name },
+        homeCollection: home?.address && home.date && home.time
+          ? { address: home.address.name, date: home.date, time: home.time, phlebotomist: home.phlebotomist?.name }
+          : undefined,
         taxTemplate: taxConfig?.templateName,
         taxRows: taxConfig?.templateTaxRows,
       });

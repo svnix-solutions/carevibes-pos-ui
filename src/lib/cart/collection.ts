@@ -5,6 +5,8 @@ export type CollectionChoice =
   | { mode: "clinic" }
   | {
       mode: "home";
+      date?: string; // YYYY-MM-DD
+      time?: string; // HH:MM
       address?: { name: string; label: string };
       phlebotomist?: { name: string; employee_name: string };
     };
@@ -19,8 +21,8 @@ export function homeCollectionFor(items: CartItem[], collection: CollectionChoic
   return collection.mode === "home" && hasLabItems(items) ? collection : null;
 }
 
-/** A home collection can't be billed without somewhere to collect from. */
+/** A home collection can't be billed without where and when to collect. */
 export function collectionReady(items: CartItem[], collection: CollectionChoice): boolean {
   const home = homeCollectionFor(items, collection);
-  return !home || !!home.address;
+  return !home || !!(home.address && home.date && home.time);
 }

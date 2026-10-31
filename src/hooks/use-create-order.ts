@@ -32,7 +32,7 @@ interface CreateOrderInput {
   payLater?: boolean;
   lab?: string; // Supplier name for custom_lab field on Sales Order
   /** Mark the order as a home collection once it's billed. */
-  homeCollection?: { address: string; phlebotomist?: string };
+  homeCollection?: { address: string; date: string; time: string; phlebotomist?: string };
   taxTemplate?: string; // Sales Taxes and Charges Template name
   taxRows?: TaxTemplateRow[]; // Tax rows from Sales Taxes template (required for API-created docs)
 }
