@@ -1,11 +1,12 @@
 "use client";
 
-import { LogOut, Receipt, Calendar, ClipboardList } from "lucide-react";
+import { LogOut, Receipt, Calendar, ClipboardList, TestTubes } from "lucide-react";
 import Image from "next/image";
 import ikleraLogo from "../../../public/ikleralogo.png";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useClinicQueue } from "@/hooks/use-clinic-samples";
 import { useSession } from "@/hooks/use-session";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +19,11 @@ const navItems = [
 export function POSHeader() {
   const pathname = usePathname();
   const { data: session } = useSession();
+  // Refused for users without the Phlebotomist role, who don't get the link.
+  const { data: pendingSamples } = useClinicQueue();
+  const links = pendingSamples
+    ? [...navItems, { href: "/samples", label: `Samples (${pendingSamples.length})`, icon: TestTubes }]
+    : navItems;
 
   function handleLogout() {
     window.location.href = "/api/auth/logout";
@@ -35,7 +41,7 @@ export function POSHeader() {
       </Link>
 
       <nav className="flex items-center gap-1">
-        {navItems.map(({ href, label, icon: Icon }) => (
+        {links.map(({ href, label, icon: Icon }) => (
           <Link key={href} href={href}>
             <Button
               variant={pathname.startsWith(href) ? "secondary" : "ghost"}
