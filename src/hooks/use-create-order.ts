@@ -68,7 +68,7 @@ export interface CreateOrderResult {
 function toDocItems(
   items: CartItem[],
   lines: CartLineTotals[],
-  salesOrder?: string
+  salesOrder?: { name: string; items: { name: string }[] }
 ) {
   return items.map((item, i) => {
     const line = lines[i];
@@ -89,7 +89,12 @@ function toDocItems(
         // from price_list_rate to give rate — not per line.
         discount_amount: round2(item.rate - line.netRate),
       }),
-      ...(salesOrder && { sales_order: salesOrder }),
+      // so_detail (the order's row) is what ERPNext bills against. With only
+      // sales_order set, the order stays "Not Billed" and turns Overdue.
+      ...(salesOrder && {
+        sales_order: salesOrder.name,
+        so_detail: salesOrder.items[i].name,
+      }),
     };
   });
 }
@@ -162,7 +167,8 @@ export function useCreateOrder() {
       };
 
       // Step 1: Create Sales Order
-      const salesOrder = await erpnext.createDoc<{ name: string }>(
+      // Rows come back in the order sent, so row i matches cart line i.
+      const salesOrder = await erpnext.createDoc<{ name: string; items: { name: string }[] }>(
         "Sales Order",
         {
           customer: patient.customer,
@@ -170,6 +176,9 @@ export function useCreateOrder() {
           transaction_date: today,
           delivery_date: today,
           order_type: "Sales",
+          // The POS never makes Delivery Notes, so the order is complete once
+          // billed. Without this it waits for a delivery and shows Overdue.
+          skip_delivery_note: 1,
           ...(doctor && { custom_doctor: doctor }),
           ...(lab && { custom_lab: lab }),
           ...taxFields,
@@ -202,7 +211,7 @@ export function useCreateOrder() {
           // is submitted, and this flow submits both — so putting the code on
           // both would spend two of the coupon's uses for a single sale.
           ...(coupon && { coupon_code: coupon.name }),
-          items: toDocItems(items, totals.lines, salesOrder.name),
+          items: toDocItems(items, totals.lines, salesOrder),
           ...(!payLater && {
             payments: payments.map((p) => ({
               mode_of_payment: p.method,
